@@ -757,7 +757,7 @@ body {
 <nav class="sidebar">
   <div class="sidebar-logo">
     <div class="logo-mark" id="logoMark" onclick="logoClick()" style="cursor:pointer;">♪</div>
-    <span class="logo-text">Arya</span>
+    <span class="logo-text" onclick="logoClick()" style="cursor:pointer;" title="✦">Arya</span>
   </div>
 
   <div class="nav-section">
@@ -2303,7 +2303,7 @@ function seekTo(e){
 audio.addEventListener('timeupdate',()=>{
   const pct=audio.duration?(audio.currentTime/audio.duration)*100:0;
   document.getElementById('pFill').style.width=pct+'%';
-  document.getElementById('pElapsed').textContent=fmtTime(audio.currentTime);
+  if(!_316active) document.getElementById('pElapsed').textContent=fmtTime(audio.currentTime);
   document.getElementById('pDur').textContent=fmtTime(audio.duration);
   check316(audio.currentTime);
   // Stat accumulation
@@ -2673,6 +2673,9 @@ fetchArchive();
 // ── BRAISES (canvas) ─────────────────────
 (function initEmbers(){
   const canvas = document.getElementById('emberCanvas');
+  const hr = new Date().getHours();
+  window._emberEvening = hr >= 20 || hr < 7; // soir = 20h–7h
+  if(!window._emberEvening) canvas.style.display = 'none';
   const ctx = canvas.getContext('2d');
   let W, H, particles = [];
   function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
@@ -2687,9 +2690,11 @@ fetchArchive();
   window._emberIntense = false;
   (function frame(){
     ctx.clearRect(0,0,W,H);
+    const visible = window._emberEvening || window._emberIntense;
     const target = window._emberIntense ? 90 : 22;
     while(particles.length<target) particles.push(spawn(true));
     while(particles.length>target && particles.length>22) particles.pop();
+    if(!visible){ requestAnimationFrame(frame); return; }
     for(let i=0;i<particles.length;i++){
       const p=particles[i]; p.y-=p.speed; p.x+=p.drift;
       ctx.save();
@@ -2718,18 +2723,18 @@ fetchArchive();
   document.head.appendChild(s);
 })();
 
-// ── 3:16 → NOCES ROUGES ──────────────────
-let _316shown = false;
+// ── 3:16 → NOCES POURPRES ──────────────────
+let _316shown = false, _316active = false;
 function check316(t){
   const s = Math.floor(t);
   if(s===196 && !_316shown){
     _316shown = true;
+    _316active = true;
     const el = document.getElementById('pElapsed');
     if(!el) return;
-    const orig = el.textContent;
-    el.textContent = '💀 Noces Rouges';
+    el.textContent = '💀 Noces Pourpres';
     el.style.cssText = 'color:#c44d6e;font-size:9px;white-space:nowrap;';
-    setTimeout(()=>{ el.textContent=orig; el.style.cssText=''; _316shown=false; }, 3000);
+    setTimeout(()=>{ el.style.cssText=''; _316active=false; _316shown=false; }, 3000);
   }
 }
 
@@ -2772,24 +2777,33 @@ function _checkKonami(key){
   else { _konamiIdx=0; if(key===_KONAMI[0]) _konamiIdx=1; }
   if(_konamiIdx===_KONAMI.length){
     _konamiIdx=0; if(_konamiActive) return; _konamiActive=true;
+    const canvas=document.getElementById('emberCanvas');
+    canvas.style.display='block';
     window._emberIntense=true; audio.playbackRate=0.82;
     toast('🔥 Valar Dohaeris');
-    setTimeout(()=>{ window._emberIntense=false; audio.playbackRate=1; _konamiActive=false; }, 9000);
+    setTimeout(()=>{ window._emberIntense=false; audio.playbackRate=1; _konamiActive=false;
+      if(!window._emberEvening) canvas.style.display='none';
+    }, 9000);
   }
 }
 
-// ── FRAPPE "valar" → SKIP ─────────────────
+// ── FRAPPE "valar" → SKIP (fonctionne partout, même dans la recherche) ─
 let _keyBuf='';
 document.addEventListener('keydown', e=>{
-  const tag=(e.target.tagName||'').toLowerCase();
-  if(tag==='input'||tag==='textarea') return;
-  _keyBuf+=e.key.toLowerCase();
+  if(e.key.length !== 1) return; // ignore Arrows, Enter, etc.
+  _keyBuf += e.key.toLowerCase();
   if(_keyBuf.length>12) _keyBuf=_keyBuf.slice(-12);
   if(_keyBuf.endsWith('valar')){
     _keyBuf='';
     toast('... morghulis 💀');
     setTimeout(()=>nextTrack(), 900);
   }
+});
+
+// ── KONAMI (hors champ de texte) ─────────
+document.addEventListener('keydown', e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea') return;
   _checkKonami(e.key);
 });
 
@@ -2852,7 +2866,14 @@ _resetInact();
   }
 })();
 
-// ── PIXEL DU LOUP (1×1px caché) ──────────
+// ── TRIPLE-TAP SUR POCHETTE (mobile) ─────
+let _pArtClicks=0, _pArtTimer=null;
+document.getElementById('pArt').addEventListener('click',()=>{
+  _pArtClicks++;
+  clearTimeout(_pArtTimer);
+  _pArtTimer=setTimeout(()=>{ _pArtClicks=0; }, 700);
+  if(_pArtClicks>=3){ _pArtClicks=0; logoClick(); }
+});
 document.getElementById('wolfPixel').addEventListener('click',()=>{
   try{
     const ac=new(window.AudioContext||window.webkitAudioContext)();
