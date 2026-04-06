@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Arya — Lecteur Musical</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0c0810">
@@ -31,6 +31,10 @@
   --player-h: 90px;
   --sidebar-w: 248px;
   --r: 10px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
@@ -660,7 +664,7 @@ body {
   .tr-art{width:36px;height:36px;font-size:15px;}
   .tr-title{font-size:13px;}
   .tr-artist-s{font-size:11px;}
-  .ico-btn{width:34px;height:34px;font-size:14px;}
+  .ico-btn{width:36px;height:36px;font-size:14px;}
 
   .hist-col-heads,.hist-track-row{grid-template-columns:24px 36px 1fr 48px !important;gap:8px;}
   .hist-col-heads>:nth-child(4),.hist-col-heads>:nth-child(5),.hist-track-row .tr-artist,.hist-track-row .tr-album{display:none;}
@@ -698,7 +702,7 @@ body {
     padding:8px 14px 6px;gap:5px;align-items:stretch;
   }
   .p-right{display:none;}
-  .p-info{flex:none;gap:10px;}
+  .p-info{flex:none;gap:10px;cursor:pointer;} /* tap to open full-screen */
   .p-art{width:38px;height:38px;font-size:17px;}
   .p-title{font-size:12.5px;}
   .p-artist{font-size:11px;margin-top:1px;}
@@ -717,6 +721,125 @@ body {
   .pseudo-box{padding:28px 20px;}
   .pseudo-h{font-size:24px;}
   .pseudo-sub{font-size:13px;}
+
+  /* Safe areas */
+  .mobile-nav{
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+    height:calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ══════════════ TABLET (641–1024px) ══════════════ */
+@media(min-width:641px) and (max-width:1024px){
+  :root{ --sidebar-w:64px; --player-h:80px; }
+  body{ grid-template-columns:var(--sidebar-w) 1fr; }
+  .sidebar{ padding:14px 0 0; overflow:visible; }
+  .sidebar-logo{ padding:0 0 18px; justify-content:center; }
+  .logo-text{ display:none; }
+  .logo-mark{ margin:0 auto; }
+  .nav-section{ padding:0 6px; }
+  .nav-label{ display:none; }
+  .nav-item{ padding:10px 6px; justify-content:center; gap:0; border-radius:10px; position:relative; }
+  .nav-item .nav-icon{ font-size:20px; width:auto; }
+  .nav-item>span:not(.nav-icon):not(.nav-badge):not(.online-dot):not(.enrich-badge){ display:none; }
+  .nav-badge{ position:absolute; top:4px; right:4px; padding:1px 4px; font-size:9px; }
+  .enrich-badge{ position:absolute; top:4px; right:4px; font-size:9px; padding:1px 4px; }
+  .online-dot{ position:absolute; top:6px; right:6px; margin-left:0; }
+  .sidebar-footer{ padding:12px 8px; text-align:center; }
+  .sf-label,.sf-change{ display:none; }
+  .sf-pseudo{ font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:48px; margin:0 auto; }
+  .player{ grid-template-columns:200px 1fr 160px; padding:0 14px; gap:10px; }
+  .sticky-bar{ padding:12px 18px; }
+  .view{ padding:18px 18px 40px; }
+  .view-title{ font-size:30px; }
+  .grid-cards{ grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
+  .stats-grid{ grid-template-columns:repeat(3,1fr); }
+  .online-grid{ grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); }
+  .editor-layout{ gap:16px; }
+  .detail-hero{ gap:18px; }
+  .detail-art{ width:120px; height:120px; }
+}
+
+/* ══════════════ FULL-SCREEN PLAYER (mobile) ══════════════ */
+.fs-player{
+  display:none; position:fixed; inset:0;
+  background:var(--bg); z-index:600;
+  flex-direction:column; align-items:center;
+  padding:max(44px, calc(16px + env(safe-area-inset-top,0px))) 24px max(24px, calc(12px + env(safe-area-inset-bottom,0px)));
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
+  animation:fsIn 0.28s cubic-bezier(.22,1,.36,1);
+}
+.fs-player.open{ display:flex; }
+@keyframes fsIn{ from{ transform:translateY(100%); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+.fs-close{
+  position:absolute; top:max(14px, calc(6px + env(safe-area-inset-top,0px))); left:16px;
+  background:var(--surface); border:none; border-radius:50%;
+  width:42px; height:42px; font-size:18px; color:var(--text2);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.fs-art{
+  width:min(76vw, 280px); height:min(76vw, 280px);
+  border-radius:18px; background:var(--surface);
+  display:flex; align-items:center; justify-content:center;
+  font-size:72px; overflow:hidden; flex-shrink:0;
+  box-shadow:0 24px 64px rgba(0,0,0,0.6); margin:10px 0 22px;
+  transition:box-shadow 0.3s;
+}
+.fs-art.playing-pulse{ animation:fsArtPulse 2s ease-in-out infinite; }
+@keyframes fsArtPulse{ 0%,100%{box-shadow:0 24px 64px rgba(0,0,0,.6),0 0 0 0 rgba(var(--accent-rgb),.4)} 50%{box-shadow:0 24px 64px rgba(0,0,0,.6),0 0 0 10px rgba(var(--accent-rgb),0)} }
+.fs-title{ font-size:22px; font-weight:700; color:var(--text); text-align:center; margin-bottom:5px; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fs-artist{ font-size:14px; color:var(--text2); text-align:center; margin-bottom:26px; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fs-progress{ width:100%; display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+.fs-track{ flex:1; height:5px; background:var(--border); border-radius:3px; cursor:pointer; position:relative; padding:12px 0; margin:-12px 0; background-clip:content-box; }
+.fs-fill{ height:5px; background:var(--accent); border-radius:3px; pointer-events:none; position:relative; }
+.fs-fill::after{ content:''; position:absolute; right:-7px; top:50%; transform:translateY(-50%); width:14px; height:14px; border-radius:50%; background:var(--accent); }
+.fs-time{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text3); flex-shrink:0; width:34px; }
+.fs-time.r{ text-align:right; }
+.fs-btns{ display:flex; align-items:center; justify-content:center; gap:22px; margin:16px 0 14px; width:100%; }
+.fs-btn{ background:none; border:none; cursor:pointer; color:var(--text2); font-size:24px; transition:all 0.15s; display:flex; align-items:center; justify-content:center; min-width:48px; min-height:48px; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+.fs-btn:active{ transform:scale(0.88); }
+.fs-btn.on{ color:var(--accent); }
+.fs-btn.rose{ color:var(--rose); }
+.fs-play{ width:66px; height:66px; border-radius:50%; background:var(--accent); color:#000; font-size:26px; flex-shrink:0; }
+.fs-play:active{ background:#c8923c; transform:scale(0.94); }
+.fs-vol-wrap{ display:flex; align-items:center; gap:10px; width:100%; max-width:320px; margin:0 auto; }
+.fs-vol-ico{ font-size:18px; color:var(--text2); flex-shrink:0; }
+.fs-vol-slider{ -webkit-appearance:none; appearance:none; flex:1; height:4px; background:var(--border); border-radius:2px; outline:none; cursor:pointer; }
+.fs-vol-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:var(--text); cursor:pointer; }
+.fs-swipe-hint{ font-size:11px; color:var(--text3); margin-top:16px; letter-spacing:0.08em; }
+
+/* ══════════════ MORE BOTTOM SHEET ══════════════ */
+.more-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:150; backdrop-filter:blur(4px); -webkit-tap-highlight-color:transparent; }
+.more-backdrop.open{ display:block; }
+.more-sheet{
+  display:none; position:fixed; bottom:0; left:0; right:0;
+  background:var(--bg2); border-top:1px solid var(--border);
+  border-radius:18px 18px 0 0; z-index:160;
+  padding:12px 16px max(20px, calc(10px + env(safe-area-inset-bottom,0px)));
+  animation:sheetUp 0.26s cubic-bezier(.22,1,.36,1);
+}
+.more-sheet.open{ display:block; }
+@keyframes sheetUp{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
+.more-sheet-handle{ width:38px; height:4px; border-radius:2px; background:var(--border); margin:0 auto 14px; }
+.more-sheet-title{ font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--text3); padding:0 4px; margin-bottom:10px; }
+.more-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.more-item{ display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:10px; background:var(--card); border:1px solid var(--border); cursor:pointer; color:var(--text2); font-size:14px; font-weight:500; transition:all .15s; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+.more-item:active{ background:var(--surface); transform:scale(0.97); }
+.more-item.active{ color:var(--accent); border-color:rgba(var(--accent-rgb),.4); background:var(--accent-glow); }
+.more-ico{ font-size:22px; flex-shrink:0; }
+
+/* ══════════════ TOUCH IMPROVEMENTS ══════════════ */
+.mn-btn{ min-height:48px; touch-action:manipulation; }
+.ico-btn{ min-width:40px; min-height:40px; }
+.sort-pill{ touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.g-card, .track-row, .back-btn, .nav-item, .dash-mini-row{ touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.main, .sidebar, .view, .ed-list, .modal-box{ -webkit-overflow-scrolling:touch; }
+button, [onclick]{ -webkit-tap-highlight-color:transparent; }
+
+/* Larger seek bar touch zone on mobile */
+@media(max-width:640px){
+  .p-track{ padding:10px 0; margin:-10px 0; background-clip:content-box; height:4px; }
 }
 
 /* ── EASTER EGGS ── pas aujourd'hui ── */
@@ -986,6 +1109,10 @@ body {
                   <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="enrichTrackManual(edTrack?.id)">🔍 Auto-chercher</button>
                   <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="searchArtistImgManual(edTrack?.id)">🎤 Photo artiste</button>
                 </div>
+                <div style="display:flex;gap:6px;margin-top:8px;">
+                  <input class="form-input mono" id="ed-meta-url" placeholder="🌐 Colle un lien à grapper…" style="font-size:11.5px;">
+                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;white-space:nowrap;flex-shrink:0;" onclick="fetchMetaFromUrl()">↓ Grapper</button>
+                </div>
               </div>
             </div>
             <div class="form-group">
@@ -1028,7 +1155,7 @@ body {
 
 <!-- PLAYER -->
 <div class="player">
-  <div class="p-info">
+  <div class="p-info" onclick="openFsPlayerIfMobile()">
     <div class="p-art" id="pArt">🎵</div>
     <div class="p-meta">
       <div class="p-title" id="pTitle">Aucune chanson sélectionnée</div>
@@ -1082,7 +1209,61 @@ body {
   <button class="mn-btn" data-view="party" onclick="showView('party')">
     <span class="mn-ico">🎉</span>Fête
   </button>
+  <button class="mn-btn" id="mnMoreBtn" onclick="openMoreSheet()">
+    <span class="mn-ico">⋯</span>Plus
+  </button>
 </nav>
+
+<!-- MORE BOTTOM SHEET -->
+<div class="more-backdrop" id="moreBackdrop" onclick="closeMoreSheet()"></div>
+<div class="more-sheet" id="moreSheet">
+  <div class="more-sheet-handle"></div>
+  <div class="more-sheet-title">Navigation</div>
+  <div class="more-grid">
+    <div class="more-item" id="moreAlbums" data-view="albums" onclick="showViewFromMore('albums')">
+      <span class="more-ico">💿</span>Albums
+    </div>
+    <div class="more-item" id="moreArtists" data-view="artists" onclick="showViewFromMore('artists')">
+      <span class="more-ico">🎤</span>Artistes
+    </div>
+    <div class="more-item" id="moreHistory" data-view="history" onclick="showViewFromMore('history')">
+      <span class="more-ico">🕐</span>Historique
+    </div>
+    <div class="more-item" id="moreOnline" data-view="online" onclick="showViewFromMore('online')">
+      <span class="more-ico">🌐</span>En ligne
+    </div>
+    <div class="more-item" id="moreEditor" data-view="editor" onclick="showViewFromMore('editor')">
+      <span class="more-ico">✏️</span>Éditeur méta
+    </div>
+  </div>
+</div>
+
+<!-- FULL-SCREEN PLAYER (mobile) -->
+<div class="fs-player" id="fsPlayer">
+  <button class="fs-close" onclick="closeFsPlayer()" aria-label="Fermer">⌄</button>
+  <div class="fs-art" id="fsArt">🎵</div>
+  <div class="fs-title" id="fsTitle">Aucune chanson</div>
+  <div class="fs-artist" id="fsArtist">Arya Music Player</div>
+  <div class="fs-progress">
+    <span class="fs-time" id="fsElapsed">0:00</span>
+    <div class="fs-track" id="fsTrack" onclick="fsSeekTo(event)">
+      <div class="fs-fill" id="fsFill" style="width:0%"></div>
+    </div>
+    <span class="fs-time r" id="fsDur">0:00</span>
+  </div>
+  <div class="fs-btns">
+    <button class="fs-btn" id="fsBtnShuffle" onclick="toggleShuffle()" title="Aléatoire">⇄</button>
+    <button class="fs-btn" onclick="prevTrack()">⏮</button>
+    <button class="fs-btn fs-play" id="fsBtnPlay" onclick="togglePlay()">▶</button>
+    <button class="fs-btn" onclick="nextTrack()">⏭</button>
+    <button class="fs-btn" id="fsBtnRepeat" onclick="toggleRepeat()">↺</button>
+  </div>
+  <div class="fs-vol-wrap">
+    <span class="fs-vol-ico" id="fsVolIco">🔊</span>
+    <input type="range" class="fs-vol-slider" id="fsVolSlider" min="0" max="100" value="80" oninput="setVolFs(this.value)">
+  </div>
+  <div class="fs-swipe-hint">← Glisser pour changer de piste →</div>
+</div>
 
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 <script>
@@ -1403,6 +1584,87 @@ async function searchArtistImgManual(trackId){
     refreshArtistImg(t.artist, img);
     toast('✅ Image artiste trouvée !');
   }catch(e){ toast('Erreur réseau', true); }
+}
+
+function _setEdCoverPreview(url){
+  const prev = document.getElementById('ed-cover-preview');
+  if(!prev) return;
+  if(url){
+    const grad = gradFor((edTrack?.artist||'')+(edTrack?.album||''));
+    prev.style.background = '';
+    prev.innerHTML = '<img src="'+url.replace(/"/g,'&quot;')+'" onerror="this.parentElement.style.background=\''+grad+'\';this.remove();">';
+  }
+}
+
+async function fetchMetaFromUrl(){
+  const url = (document.getElementById('ed-meta-url')?.value||'').trim();
+  if(!url){ toast('Colle un lien dans le champ d\'abord', true); return; }
+
+  // Lien direct vers une image → pochette directe
+  if(/\.(jpe?g|png|webp|gif|avif)(\?.*)?$/i.test(url)){
+    document.getElementById('ed-cover').value = url;
+    _setEdCoverPreview(url);
+    toast('✅ Pochette appliquée depuis le lien image');
+    return;
+  }
+
+  toast('🌐 Récupération des métadonnées…');
+  try{
+    // Proxies CORS en fallback
+    const proxies = [
+      u => 'https://corsproxy.io/?'+encodeURIComponent(u),
+      u => 'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u),
+      u => 'https://api.allorigins.win/get?url='+encodeURIComponent(u),
+    ];
+    let html = '';
+    for(const makeUrl of proxies){
+      try{
+        const r = await fetch(makeUrl(url), {signal: AbortSignal.timeout(7000)});
+        if(!r.ok) continue;
+        const raw = await r.text();
+        // allorigins renvoie du JSON {contents:...}, les autres renvoient du HTML direct
+        try{ const j=JSON.parse(raw); html=j.contents||raw; }catch{ html=raw; }
+        if(html && html.includes('<')) break;
+      }catch{ continue; }
+    }
+    if(!html || !html.includes('<')){ toast('⚠️ Impossible de charger la page (tous les proxies ont échoué)', true); return; }
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    // Helpers
+    const og   = n => doc.querySelector('meta[property="og:'+n+'"]')?.content || doc.querySelector('meta[name="og:'+n+'"]')?.content || '';
+    const meta  = n => doc.querySelector('meta[name="'+n+'"]')?.content || doc.querySelector('meta[property="'+n+'"]')?.content || '';
+    const ld    = () => { try{ const s=doc.querySelector('script[type="application/ld+json"]'); return s?JSON.parse(s.textContent):{} }catch{return{}} };
+
+    // JSON-LD (riche sur Spotify, Deezer, Genius, Wikipedia…)
+    const json = ld();
+    const jd   = json['@graph']?.[0] || json;
+
+    // Extraire chaque champ avec fallbacks multiples
+    const cover  = og('image') || meta('twitter:image') || jd.image?.url || jd.image || '';
+    const title  = og('title') || jd.name || meta('twitter:title') || doc.title || '';
+    const artist = jd.byArtist?.name || jd.creator?.name || jd.author?.name || og('music:musician') || meta('music:musician') || '';
+    const album  = jd.inAlbum?.name || jd.partOfAlbum?.name || og('music:album') || meta('music:album') || jd.albumName || '';
+    const yearRaw= jd.datePublished || jd.dateCreated || jd.inAlbum?.datePublished || og('music:release_date') || meta('music:release_date') || '';
+    const year   = yearRaw ? String(yearRaw).slice(0,4) : '';
+    const genre  = (Array.isArray(jd.genre)?jd.genre[0]:jd.genre) || '';
+
+    // Appliquer aux champs (sans écraser ce que l'utilisateur a déjà saisi)
+    const set = (id, val) => { const f=document.getElementById(id); if(f&&val&&!f.value) f.value=val; return !!(f&&val); };
+    let applied = [];
+
+    if(cover){ document.getElementById('ed-cover').value=cover; _setEdCoverPreview(cover); applied.push('pochette'); }
+    if(set('ed-title',  title))  applied.push('titre');
+    if(set('ed-artist', artist)) applied.push('artiste');
+    if(set('ed-album',  album))  applied.push('album');
+    if(set('ed-year',   year))   applied.push('année');
+    if(set('ed-genre',  genre))  applied.push('genre');
+
+    if(applied.length) toast('✅ Récupéré : '+applied.join(', '));
+    else toast('⚠️ Aucune metadata trouvée sur cette page', true);
+  }catch(e){
+    console.warn('[fetchMetaFromUrl]', e);
+    toast('Erreur réseau ou CORS', true);
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -2891,6 +3153,181 @@ document.getElementById('wolfPixel').addEventListener('click',()=>{
 });
 </script>
 <script>
+/* ══════════════════════════════════════════════
+   FULL-SCREEN PLAYER
+══════════════════════════════════════════════ */
+let _fsOpen = false;
+
+function openFsPlayerIfMobile(){
+  if(window.innerWidth > 640) return;
+  openFsPlayer();
+}
+
+function openFsPlayer(){
+  _fsOpen = true;
+  const fs = document.getElementById('fsPlayer');
+  fs.classList.add('open');
+  syncFsPlayer();
+  // Prevent body scroll on iOS
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFsPlayer(){
+  _fsOpen = false;
+  document.getElementById('fsPlayer').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function syncFsPlayer(){
+  if(!_fsOpen) return;
+  // Art
+  const srcArt = document.getElementById('pArt');
+  const fsArt = document.getElementById('fsArt');
+  fsArt.style.background = srcArt.style.background;
+  fsArt.innerHTML = srcArt.innerHTML;
+  if(isPlaying) fsArt.classList.add('playing-pulse');
+  else fsArt.classList.remove('playing-pulse');
+  // Meta
+  document.getElementById('fsTitle').textContent = document.getElementById('pTitle').textContent;
+  document.getElementById('fsArtist').textContent = document.getElementById('pArtist').textContent;
+  // Progress
+  document.getElementById('fsFill').style.width = document.getElementById('pFill').style.width;
+  document.getElementById('fsElapsed').textContent = document.getElementById('pElapsed').textContent;
+  document.getElementById('fsDur').textContent = document.getElementById('pDur').textContent;
+  // Play button
+  document.getElementById('fsBtnPlay').textContent = isPlaying ? '⏸' : '▶';
+  // Shuffle
+  document.getElementById('fsBtnShuffle').classList.toggle('on', shuffle);
+  // Repeat
+  const rb = document.getElementById('fsBtnRepeat');
+  rb.textContent = repeat===2 ? '⟳' : '↺';
+  rb.classList.toggle('on', repeat > 0);
+  rb.classList.toggle('rose', repeat === 2);
+  // Volume
+  document.getElementById('fsVolSlider').value = Math.round(audio.volume * 100);
+  document.getElementById('fsVolIco').textContent = audio.volume===0?'🔇':audio.volume<0.5?'🔉':'🔊';
+}
+
+function fsSeekTo(e){
+  if(partyMode === 'listener') return;
+  const r = e.currentTarget.getBoundingClientRect();
+  const pct = (e.clientX - r.left) / r.width;
+  if(audio.duration) audio.currentTime = Math.max(0, Math.min(pct * audio.duration, audio.duration));
+}
+
+function setVolFs(v){
+  setVol(v);
+  document.getElementById('fsVolIco').textContent = v==0?'🔇':v<50?'🔉':'🔊';
+  document.getElementById('volSlider').value = v;
+}
+
+// Patch audio events to also sync FS player
+const _origPlay = audio.addEventListener.bind(audio);
+audio.addEventListener('timeupdate', () => {
+  if(!_fsOpen) return;
+  document.getElementById('fsFill').style.width = document.getElementById('pFill').style.width;
+  if(!_316active) document.getElementById('fsElapsed').textContent = fmtTime(audio.currentTime);
+  document.getElementById('fsDur').textContent = fmtTime(audio.duration);
+}, true);
+audio.addEventListener('play', () => {
+  if(_fsOpen){
+    document.getElementById('fsBtnPlay').textContent = '⏸';
+    document.getElementById('fsArt').classList.add('playing-pulse');
+  }
+}, true);
+audio.addEventListener('pause', () => {
+  if(_fsOpen){
+    document.getElementById('fsBtnPlay').textContent = '▶';
+    document.getElementById('fsArt').classList.remove('playing-pulse');
+  }
+}, true);
+
+/* ══════════════════════════════════════════════
+   SWIPE GESTURES (player + full-screen player)
+══════════════════════════════════════════════ */
+(function initSwipe(){
+  let _sx=0, _sy=0, _sTarget=null;
+
+  function onTouchStart(e){
+    _sx = e.touches[0].clientX;
+    _sy = e.touches[0].clientY;
+    _sTarget = e.currentTarget;
+  }
+  function onTouchEnd(e){
+    const dx = e.changedTouches[0].clientX - _sx;
+    const dy = e.changedTouches[0].clientY - _sy;
+    if(Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if(dx < 0) nextTrack();
+    else prevTrack();
+  }
+
+  // Add to player bar (mini player) and full-screen art
+  const player = document.querySelector('.player');
+  const fsArt = document.getElementById('fsArt');
+  if(player){
+    player.addEventListener('touchstart', onTouchStart, {passive:true});
+    player.addEventListener('touchend', onTouchEnd, {passive:true});
+  }
+  if(fsArt){
+    fsArt.addEventListener('touchstart', onTouchStart, {passive:true});
+    fsArt.addEventListener('touchend', onTouchEnd, {passive:true});
+  }
+})();
+
+/* ══════════════════════════════════════════════
+   MORE BOTTOM SHEET
+══════════════════════════════════════════════ */
+const MORE_VIEWS = ['albums','artists','history','online','editor'];
+
+function openMoreSheet(){
+  document.getElementById('moreBackdrop').classList.add('open');
+  document.getElementById('moreSheet').classList.add('open');
+  // Mark active items
+  const cur = document.querySelector('.view.active')?.id?.replace('view-','') || '';
+  MORE_VIEWS.forEach(v=>{
+    const el = document.querySelector(`#more${v.charAt(0).toUpperCase()+v.slice(1)}`);
+    if(el) el.classList.toggle('active', v === cur);
+  });
+}
+
+function closeMoreSheet(){
+  document.getElementById('moreBackdrop').classList.remove('open');
+  document.getElementById('moreSheet').classList.remove('open');
+}
+
+function showViewFromMore(name){
+  closeMoreSheet();
+  showView(name);
+  // Mark the More button as "active" if on a More view
+  const mnMore = document.getElementById('mnMoreBtn');
+  if(mnMore) mnMore.classList.add('active');
+}
+
+/* Patch showView to handle More sheet active state */
+const _origShowView = showView;
+window.showView = function(name){
+  _origShowView(name);
+  // If navigating to a main nav view, deactivate More button
+  const mainViews = ['dashboard','songs','favorites','stats','party'];
+  const mnMore = document.getElementById('mnMoreBtn');
+  if(mnMore){
+    if(mainViews.includes(name)) mnMore.classList.remove('active');
+    else if(MORE_VIEWS.includes(name)) mnMore.classList.add('active');
+  }
+  // Sync full-screen player if open
+  if(_fsOpen) syncFsPlayer();
+  // Close more sheet if open
+  closeMoreSheet();
+};
+
+/* Patch updatePlayerUI to also sync full-screen player */
+const _origUpdatePlayerUI = updatePlayerUI;
+window.updatePlayerUI = function(t){
+  _origUpdatePlayerUI(t);
+  if(_fsOpen) setTimeout(syncFsPlayer, 50);
+};
+
+
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
     navigator.serviceWorker.register("./sw.js")
