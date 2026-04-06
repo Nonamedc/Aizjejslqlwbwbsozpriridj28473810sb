@@ -2151,7 +2151,6 @@ function loadAndPlay(t){
   broadcastTrack(t);
   updateMediaSession(t);
   acquireWakeLock();
-  startViz();
   if(partyMode === 'host') broadcastPartyState();
 }
 
@@ -2348,6 +2347,7 @@ function initAudioCtx(){
   if(audioCtx) return;
   try{
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume(); // crucial sur mobile : AudioContext demarre suspendu
     analyserNode = audioCtx.createAnalyser();
     analyserNode.fftSize = 64;
     analyserNode.smoothingTimeConstant = 0.84;
@@ -2572,7 +2572,10 @@ function unlockAudio(){
   audioUnlocked = true;
   const silent = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
   silent.play().catch(()=>{});
-  initAudioCtx(); // init Web Audio after user gesture
+  // NE PAS appeler initAudioCtx() ici — createMediaElementSource() intercepte
+  // l'audio et le route dans l'AudioContext. Sur mobile, AudioContext est
+  // suspendu par defaut → le son entre dans le contexte mais ne sort pas.
+  // initAudioCtx sera appele uniquement a l'ouverture du player fullscreen.
 }
 document.addEventListener('touchstart', unlockAudio, {once:true,passive:true});
 document.addEventListener('click', unlockAudio, {once:true});
@@ -2581,7 +2584,8 @@ document.addEventListener('click', unlockAudio, {once:true});
 function openFP(){
   document.getElementById('fullscreenPlayer').classList.add('open');
   document.getElementById('fpVolSlider').value=Math.round(masterVolume*100);
-  // Start visualizer when FP opens
+  // Init AudioContext ici uniquement (apres user gesture, pour le visualizer)
+  initAudioCtx();
   if(isPlaying && !vizRunning) startViz();
 }
 function closeFP(){
