@@ -1325,9 +1325,9 @@ body::after{
     <button class="p-btn" onclick="openFP()" title="Agrandir" style="font-size:14px;">⬆</button>
   </div>
   <div class="mobile-quick">
-    <button class="mq-btn" onclick="prevTrack()">⏮</button>
-    <button class="mq-btn play" id="mqPlay" onclick="togglePlay()">▶</button>
-    <button class="mq-btn" onclick="nextTrack()">⏭</button>
+    <button class="mq-btn" onclick="event.stopPropagation();prevTrack()">⏮</button>
+    <button class="mq-btn play" id="mqPlay" onclick="event.stopPropagation();togglePlay()">▶</button>
+    <button class="mq-btn" onclick="event.stopPropagation();nextTrack()">⏭</button>
   </div>
   <div class="cf-indicator" id="cfIndicator">crossfade</div>
 </div>
@@ -2181,17 +2181,26 @@ async function loadAndPlay(t, withCrossfade=false){
   const incoming=activeAudio===audioA?audioB:audioA;
   const outgoing=activeAudio;
 
-  const audioUrl = await getAudioUrl(t);
-  incoming.src=audioUrl;
+  // Utiliser l'URL directe d'abord (blob si déjà en cache, sinon URL archive.org).
+  // NE PAS faire await fetch() ici : iOS/Safari perd le "user gesture token" après
+  // une vraie opération réseau async, ce qui bloque play().
+  const cachedUrl = blobCache.has(t.filename) ? blobCache.get(t.filename) : t.url;
+  incoming.src=cachedUrl;
   incoming.playbackRate=currentSpeed;
   incoming.volume=withCrossfade?0:masterVolume;
+
+  // ⚠️ DOIT être AVANT play() : les events timeupdate/play/pause vérifient
+  // "if(a !== activeAudio) return" — sans ça, toute l'UI reste figée.
+  activeAudio=incoming;
 
   try{ await incoming.play(); }
   catch(e){ console.warn('Lecture bloquée:',e); toast('Appuie sur Play pour lancer la musique',true); }
 
+  // Fetch blob en arrière-plan pour optimiser les prochaines lectures
+  if(!blobCache.has(t.filename)){ getAudioUrl(t).catch(()=>{}); }
+
   prefetchNext();
   recordPlay(t); // ← track history & counts
-  activeAudio=incoming;
 
   if(withCrossfade&&crossfadeOn){
     const steps=Math.max(20,crossfadeSec*15);
