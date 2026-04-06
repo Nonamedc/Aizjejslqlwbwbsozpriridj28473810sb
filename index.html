@@ -1645,7 +1645,6 @@ let activeAudio = audioA;
   a.addEventListener('play', () => {
     if(a !== activeAudio) return;
     isPlaying = true;
-    if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
     updatePlayBtns();
     acquireWakeLock();
     startListenTimer();
@@ -2182,20 +2181,13 @@ async function loadAndPlay(t, withCrossfade=false){
   const incoming=activeAudio===audioA?audioB:audioA;
   const outgoing=activeAudio;
 
-  // Jouer immédiatement (blob en cache si dispo, sinon URL directe)
-  const audioUrl = blobCache.has(t.filename) ? blobCache.get(t.filename) : t.url;
+  const audioUrl = await getAudioUrl(t);
   incoming.src=audioUrl;
   incoming.playbackRate=currentSpeed;
   incoming.volume=withCrossfade?0:masterVolume;
 
-  // Résoudre l'AudioContext suspendu (iOS/Safari)
-  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
-
   try{ await incoming.play(); }
   catch(e){ console.warn('Lecture bloquée:',e); toast('Appuie sur Play pour lancer la musique',true); }
-
-  // Cache le blob en arrière-plan pour les prochaines écoutes
-  if(!blobCache.has(t.filename)) getAudioUrl(t);
 
   prefetchNext();
   recordPlay(t); // ← track history & counts
@@ -2306,7 +2298,6 @@ function highlightPlaying(){
 
 function togglePlay(){
   if(currentId===null){if(tracks.length)playTrack(tracks[0].id);return;}
-  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
   if(isPlaying) activeAudio.pause();
   else activeAudio.play().catch(()=>{});
 }
