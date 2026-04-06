@@ -6,12 +6,7 @@
 <title>Arya — Lecteur Musical</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#d4a054">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Arya">
-  <style>
+<style>
 :root {
   --bg: #0c0810;
   --bg2: #130e17;
@@ -525,6 +520,30 @@ body {
 @keyframes artPulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--accent-rgb),.4)}50%{box-shadow:0 0 0 6px rgba(var(--accent-rgb),0)}}
 .p-art.playing-pulse{animation:artPulse 2s ease-in-out infinite;}
 
+/* ── COVER IMAGES ── */
+.tr-art img,.g-art img,.p-art img,.detail-art img,.dash-mini-art img,.dash-now-art img,.ed-cover-preview img{
+  width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;
+}
+.tr-art,.g-art,.detail-art,.dash-mini-art,.dash-now-art{overflow:hidden;}
+
+/* ── ENRICH BADGE ── */
+.enrich-badge{
+  margin-left:auto;background:rgba(var(--accent-rgb),.18);color:var(--accent);
+  font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
+  animation:pulse 1.5s ease-in-out infinite;
+}
+
+/* ── EDITOR COVER PREVIEW ── */
+.ed-cover-preview{
+  width:100%;aspect-ratio:1;max-width:120px;border-radius:10px;
+  background:var(--surface);display:flex;align-items:center;
+  justify-content:center;font-size:36px;margin-bottom:12px;overflow:hidden;
+  border:1px solid var(--border);
+}
+.ed-cover-search{
+  display:flex;gap:8px;align-items:center;margin-top:6px;
+}
+
 /* ══════════════ DASHBOARD ══════════════ */
 .dash-now{
   background:linear-gradient(135deg,rgba(212,160,84,.13),rgba(196,77,110,.07));
@@ -693,12 +712,32 @@ body {
   .pseudo-h{font-size:24px;}
   .pseudo-sub{font-size:13px;}
 }
+
+/* ── EASTER EGGS ── pas aujourd'hui ── */
+@keyframes knifeSlash{
+  0%{left:-80px;opacity:1;transform:translateY(-50%) scaleX(-1);}
+  85%{opacity:1;}
+  100%{left:calc(100vw + 80px);opacity:0;transform:translateY(-50%) scaleX(-1);}
+}
+#easterEye{
+  position:fixed;bottom:106px;left:50%;
+  transform:translateX(-50%);
+  font-size:22px;z-index:400;
+  pointer-events:none;opacity:0;
+  transition:opacity .4s;
+}
 </style>
 </head>
 <body>
 
 <!-- PSEUDO SCREEN -->
 <div class="pseudo-screen" id="pseudoScreen">
+
+<!-- EASTER EGGS — hidden -->
+<canvas id="emberCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:1;width:100%;height:100%;"></canvas>
+<div id="faceless" aria-label="une fille n'a pas de nom" style="display:none;position:fixed;inset:0;background:#fff;z-index:9990;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:18px;letter-spacing:.2em;color:#111;cursor:pointer;"></div>
+<div id="wolfPixel" style="position:fixed;bottom:200px;left:33px;width:1px;height:1px;cursor:pointer;z-index:9998;" title=""></div>
+<!-- end easter eggs -->
   <div class="pseudo-box">
     <div class="pseudo-emoji">🎵</div>
     <h2 class="pseudo-h">Bienvenue sur Arya</h2>
@@ -711,7 +750,7 @@ body {
 <!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-mark">♪</div>
+    <div class="logo-mark" id="logoMark" onclick="logoClick()" style="cursor:pointer;">♪</div>
     <span class="logo-text">Arya</span>
   </div>
 
@@ -749,6 +788,7 @@ body {
     </div>
     <div class="nav-item" data-view="editor" onclick="showView('editor')">
       <span class="nav-icon">✏️</span> Éditeur méta
+      <span class="enrich-badge" id="enrichBadge" style="display:none;"></span>
     </div>
     <div class="nav-item" data-view="online" onclick="showView('online')">
       <span class="nav-icon">🌐</span> En ligne
@@ -930,6 +970,18 @@ body {
         <div id="edForm" style="display:none;">
           <div class="ed-section-label" id="edFormLabel">Éditer</div>
           <div class="form-card">
+            <!-- Cover preview + search -->
+            <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:14px;">
+              <div class="ed-cover-preview" id="ed-cover-preview">🎵</div>
+              <div style="flex:1;min-width:0;">
+                <label class="form-label">Pochette (URL)</label>
+                <input class="form-input mono" id="ed-cover" placeholder="https://… ou laisser vide">
+                <div class="ed-cover-search" style="margin-top:8px;">
+                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="enrichTrackManual(edTrack?.id)">🔍 Auto-chercher</button>
+                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="searchArtistImgManual(edTrack?.id)">🎤 Photo artiste</button>
+                </div>
+              </div>
+            </div>
             <div class="form-group">
               <label class="form-label">Titre</label>
               <input class="form-input" id="ed-title" placeholder="Titre de la chanson">
@@ -1040,6 +1092,7 @@ const HIST_STORE   = 'arya_history_v1';
 const STATS_STORE  = 'arya_stats_v1';
 const ABLY_CH      = 'arya-presence-v1';
 const MAX_HIST     = 150;
+const ARTIST_IMG_STORE = 'arya_artist_imgs_v1';
 
 /* ═══════════════════════════════════════════
    STATE
@@ -1137,6 +1190,216 @@ function setTrackMeta(fn,d){ const m=getMeta(); m[fn]={...m[fn],...d}; saveMeta(
 function clearTrackMeta(fn){ const m=getMeta(); delete m[fn]; saveMeta(m); }
 
 /* ═══════════════════════════════════════════
+   COVERS & ARTIST IMAGES
+═══════════════════════════════════════════ */
+function getCover(filename){ return getMeta()[filename]?.cover || null; }
+
+function getArtistImgStore(){ try{ return JSON.parse(localStorage.getItem(ARTIST_IMG_STORE)||'{}'); }catch{ return {}; } }
+function getArtistImg(name){ return getArtistImgStore()[name] || null; }
+function setArtistImg(name, url){ const d=getArtistImgStore(); d[name]=url; localStorage.setItem(ARTIST_IMG_STORE,JSON.stringify(d)); }
+
+/* ── Art div helpers ── */
+function artDivHtml(t, cls='tr-art', extraStyle=''){
+  const cover = t?.filename ? getCover(t.filename) : null;
+  const grad = gradFor((t?.artist||'')+(t?.album||t?.filename||''));
+  const bg = cover ? '' : `background:${grad};`;
+  return `<div class="${cls}" style="${bg}${extraStyle}" data-art-id="${t?.id??''}">${
+    cover
+      ? `<img src="${esc(cover)}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">`
+      : '🎵'
+  }</div>`;
+}
+
+function albumArtDivHtml(albumTracks, cls='g-art'){
+  const firstTrack = albumTracks?.[0];
+  const cover = firstTrack ? getCover(firstTrack.filename) : null;
+  const grad = gradFor(firstTrack?.album||'');
+  return `<div class="${cls}" style="${cover?'':'background:'+grad}">${
+    cover ? `<img src="${esc(cover)}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">` : '💿'
+  }</div>`;
+}
+
+function artistArtDivHtml(artistName){
+  const img = getArtistImg(artistName);
+  const grad = gradFor(artistName);
+  return `<div class="g-art" style="border-radius:50%;${img?'':'background:'+grad}" data-artist-art="${escAttr(artistName)}">${
+    img ? `<img src="${esc(img)}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">` : '🎤'
+  }</div>`;
+}
+
+function miniArtHtml(t, e){
+  // t = track object (may be null for history), e = entry/data object
+  const cover = t ? getCover(t.filename) : null;
+  const grad = gradFor((e?.artist||'')+(e?.album||e?.filename||''));
+  return `<div class="dash-mini-art" style="${cover?'':'background:'+grad}">${
+    cover ? `<img src="${esc(cover)}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">` : '🎵'
+  }</div>`;
+}
+
+/* ── Live cover refresh ── */
+function refreshCoverForTrack(trackId, coverUrl){
+  const grad = gradFor((tracks.find(x=>x.id===trackId)?.artist||'')+(tracks.find(x=>x.id===trackId)?.album||''));
+  document.querySelectorAll(`[data-art-id="${trackId}"]`).forEach(el=>{
+    el.style.background = '';
+    el.innerHTML = `<img src="${coverUrl}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">`;
+  });
+  if(currentId === trackId){
+    const pArt = document.getElementById('pArt');
+    if(pArt){
+      pArt.style.background = '';
+      pArt.innerHTML = `<img src="${coverUrl}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">`;
+    }
+  }
+}
+
+function refreshArtistImg(artistName, imgUrl){
+  document.querySelectorAll(`[data-artist-art="${CSS.escape(artistName)}"]`).forEach(el=>{
+    el.style.background = '';
+    el.innerHTML = `<img src="${imgUrl}" loading="lazy" style="border-radius:50%;" onerror="this.parentElement.style.background='${gradFor(artistName)}';this.remove();">`;
+  });
+}
+
+/* ═══════════════════════════════════════════
+   ITUNES API ENRICHMENT
+═══════════════════════════════════════════ */
+let _enrichQueue = [];
+let _enrichRunning = false;
+let _enrichDone = 0;
+let _enrichTotal = 0;
+
+async function fetchItunesMeta(title, artist){
+  const q = encodeURIComponent(`${artist} ${title}`);
+  const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&limit=5&country=fr`);
+  if(!r.ok) return null;
+  const d = await r.json();
+  if(!d.results?.length) return null;
+  // Prefer exact artist match
+  const m = d.results.find(x=>x.artistName?.toLowerCase()===artist.toLowerCase()) || d.results[0];
+  return {
+    cover: m.artworkUrl100?.replace('100x100bb','600x600bb')?.replace('/100x100bb.','/600x600bb.') || null,
+    album: m.collectionName || null,
+    year:  m.releaseDate?.slice(0,4) || null,
+    genre: m.primaryGenreName || null,
+    artistName: m.artistName || null,
+  };
+}
+
+async function fetchItunesArtistImg(artist){
+  const q = encodeURIComponent(artist);
+  const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=musicArtist&limit=5`);
+  if(!r.ok) return null;
+  const d = await r.json();
+  const m = d.results?.find(x=>x.artistName?.toLowerCase()===artist.toLowerCase()) || d.results?.[0];
+  const url = m?.artworkUrl100;
+  if(!url) return null;
+  return url.replace('100x100bb','600x600bb').replace('/100x100bb.','/600x600bb.');
+}
+
+async function startEnrichment(){
+  const meta = getMeta();
+  _enrichQueue = tracks.filter(t => !meta[t.filename]?.cover).map(t => t.filename);
+  _enrichTotal = _enrichQueue.length;
+  _enrichDone = 0;
+  if(!_enrichQueue.length){ updateEnrichBadge(); return; }
+  if(_enrichRunning) return;
+  _enrichRunning = true;
+  updateEnrichBadge();
+  processEnrichQueue();
+}
+
+async function processEnrichQueue(){
+  const artistsDone = new Set();
+  while(_enrichQueue.length > 0){
+    const fn = _enrichQueue.shift();
+    const t = tracks.find(x=>x.filename===fn);
+    if(!t){ _enrichDone++; updateEnrichBadge(); continue; }
+    try{
+      const info = await fetchItunesMeta(t.title, t.artist);
+      if(info?.cover){
+        const cur = getMeta()[fn] || {};
+        setTrackMeta(fn, {
+          cover: info.cover,
+          ...(!cur.album || cur.album==='Sans album' ? {album: info.album||cur.album} : {}),
+          ...(!cur.year && info.year ? {year: info.year} : {}),
+          ...(!cur.genre && info.genre ? {genre: info.genre} : {}),
+        });
+        // Sync track in memory
+        const tr = tracks.find(x=>x.filename===fn);
+        if(tr){
+          if(!tr.album || tr.album==='Sans album') tr.album = info.album || tr.album;
+          if(!tr.year && info.year) tr.year = info.year;
+          if(!tr.genre && info.genre) tr.genre = info.genre;
+        }
+        refreshCoverForTrack(t.id, info.cover);
+      }
+      // Artist image (once per artist)
+      if(!artistsDone.has(t.artist) && !getArtistImg(t.artist)){
+        artistsDone.add(t.artist);
+        fetchItunesArtistImg(t.artist).then(img=>{
+          if(img){ setArtistImg(t.artist, img); refreshArtistImg(t.artist, img); }
+        }).catch(()=>{});
+      }
+    }catch(e){ /* réseau down, on skip */ }
+    _enrichDone++;
+    updateEnrichBadge();
+    await new Promise(r=>setTimeout(r,500));
+  }
+  _enrichRunning = false;
+  updateEnrichBadge();
+  // Refresh albums/artists cards with real covers
+  renderAlbums();
+  renderArtists();
+  renderDashboard();
+}
+
+function updateEnrichBadge(){
+  const el = document.getElementById('enrichBadge');
+  if(!el) return;
+  const remaining = _enrichTotal - _enrichDone;
+  if(_enrichRunning && remaining > 0){
+    el.style.display = '';
+    el.textContent = `⟳ ${remaining}`;
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+async function enrichTrackManual(trackId){
+  const t = tracks.find(x=>x.id===trackId);
+  if(!t) return;
+  toast('🔍 Recherche en cours…');
+  try{
+    const info = await fetchItunesMeta(t.title, t.artist);
+    if(!info?.cover){ toast('Aucune pochette trouvée', true); return; }
+    setTrackMeta(t.filename, {
+      cover: info.cover,
+      ...(info.album ? {album: info.album} : {}),
+      ...(info.year  ? {year:  info.year}  : {}),
+      ...(info.genre ? {genre: info.genre} : {}),
+    });
+    t.album = info.album || t.album;
+    t.year  = info.year  || t.year;
+    t.genre = info.genre || t.genre;
+    refreshCoverForTrack(t.id, info.cover);
+    toast('✅ Pochette trouvée !');
+    openEditor(trackId);
+  }catch(e){ toast('Erreur réseau', true); }
+}
+
+async function searchArtistImgManual(trackId){
+  const t = tracks.find(x=>x.id===trackId);
+  if(!t) return;
+  toast('🔍 Recherche image artiste…');
+  try{
+    const img = await fetchItunesArtistImg(t.artist);
+    if(!img){ toast('Aucune image artiste trouvée', true); return; }
+    setArtistImg(t.artist, img);
+    refreshArtistImg(t.artist, img);
+    toast('✅ Image artiste trouvée !');
+  }catch(e){ toast('Erreur réseau', true); }
+}
+
+/* ═══════════════════════════════════════════
    FAVORITES
 ═══════════════════════════════════════════ */
 function getFavs(){ try{ return new Set(JSON.parse(localStorage.getItem(FAV_STORE)||'[]')); }catch{ return new Set(); } }
@@ -1183,7 +1446,7 @@ function renderFavorites(){
     <div class="track-row${currentId===t.id?' playing':''}" data-id="${t.id}" onclick="playTrack(${t.id})">
       <div class="tr-num">${i+1}</div>
       <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
-      <div class="tr-art" style="background:${gradFor(t.artist+t.album)}">🎵</div>
+      ${artDivHtml(t)}
       <div class="tr-info">
         <div class="tr-title">${esc(t.title)}</div>
         <div class="tr-artist-s">${esc(t.artist)}</div>
@@ -1234,11 +1497,15 @@ function renderHistory(){
     const t = tracks.find(x => x.filename === e.filename);
     const id = t ? t.id : -1;
     const hhmm = new Date(e.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    const cover = t ? getCover(t.filename) : null;
+    const grad = gradFor(e.artist+e.album);
     return `
       <div class="track-row hist-track-row${currentId===id?' playing':''}" data-id="${id}" onclick="${id>=0?`playTrack(${id})`:''}">
         <div class="tr-num" style="font-size:11px;font-family:'JetBrains Mono',monospace;">${i+1}</div>
         <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
-        <div class="tr-art" style="background:${gradFor(e.artist+e.album)}">🎵</div>
+        <div class="tr-art" style="${cover?'':'background:'+grad};overflow:hidden;" data-art-id="${id}">
+          ${cover?`<img src="${esc(cover)}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">`:'🎵'}
+        </div>
         <div class="tr-info">
           <div class="tr-title">${esc(e.title)}</div>
           <div class="tr-artist-s">${esc(e.artist)}</div>
@@ -1603,6 +1870,7 @@ async function fetchArchive(){
     buildQueue();
     renderAll();
     updateCounts();
+    startEnrichment();
   }catch(e){
     console.error(e);
     document.getElementById('trackList').innerHTML=`<div style="color:var(--text2);padding:48px;text-align:center;">❌ Impossible de charger la bibliothèque.<br><small style="color:var(--text3);">${e.message}</small></div>`;
@@ -1648,7 +1916,7 @@ function renderSongs(){
     <div class="track-row${currentId===t.id?' playing':''}" data-id="${t.id}" onclick="playTrack(${t.id})">
       <div class="tr-num">${i+1}</div>
       <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
-      <div class="tr-art" style="background:${gradFor(t.artist+t.album)}">🎵</div>
+      ${artDivHtml(t)}
       <div class="tr-info">
         <div class="tr-title">${esc(t.title)}</div>
         <div class="tr-artist-s">${sub}</div>
@@ -1680,7 +1948,7 @@ function renderAlbums(){
   const albs=getAlbums();
   document.getElementById('albumGrid').innerHTML=albs.map(a=>`
     <div class="g-card" data-aname="${esc(a.name)}" data-atype="album" onclick="showDetailFromEl(this)">
-      <div class="g-art" style="background:${gradFor(a.name)}">💿</div>
+      ${albumArtDivHtml(a.tracks)}
       <div class="g-name">${esc(a.name)}</div>
       <div class="g-sub">${esc(a.artist)} · ${a.count} titre${a.count>1?'s':''}</div>
     </div>
@@ -1701,7 +1969,7 @@ function renderArtists(){
   const arts=getArtists();
   document.getElementById('artistGrid').innerHTML=arts.map(a=>`
     <div class="g-card g-artist" data-aname="${esc(a.name)}" data-atype="artist" onclick="showDetailFromEl(this)">
-      <div class="g-art" style="background:${gradFor(a.name)};border-radius:50%;">🎤</div>
+      ${artistArtDivHtml(a.name)}
       <div class="g-name">${esc(a.name)}</div>
       <div class="g-sub">${a.albums.size} album${a.albums.size>1?'s':''} · ${a.tracks.length} titre${a.tracks.length>1?'s':''}</div>
     </div>
@@ -1721,9 +1989,26 @@ function showDetail(type,name){
   detailTracks=filtered2;
   document.getElementById('detailType').textContent=type==='album'?'Album':'Artiste';
   document.getElementById('detailName').textContent=name;
-  document.getElementById('detailArt').style.background=gradFor(name);
-  document.getElementById('detailArt').style.borderRadius=type==='artist'?'50%':'12px';
-  document.getElementById('detailArt').textContent=type==='album'?'💿':'🎤';
+
+  // Hero art avec vraie pochette
+  const heroArt = document.getElementById('detailArt');
+  heroArt.style.borderRadius = type==='artist'?'50%':'12px';
+  if(type==='album'){
+    const cover = filtered2[0] ? getCover(filtered2[0].filename) : null;
+    const grad = gradFor(name);
+    heroArt.style.background = cover ? '' : grad;
+    heroArt.innerHTML = cover
+      ? `<img src="${esc(cover)}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" onerror="this.parentElement.style.background='${grad}';this.remove();">`
+      : '💿';
+  } else {
+    const img = getArtistImg(name);
+    const grad = gradFor(name);
+    heroArt.style.background = img ? '' : grad;
+    heroArt.innerHTML = img
+      ? `<img src="${esc(img)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.style.background='${grad}';this.remove();">`
+      : '🎤';
+  }
+
   if(type==='album'){
     const artist=filtered2[0]?.artist||'';
     document.getElementById('detailSub').textContent=`${artist} · ${filtered2.length} titre${filtered2.length>1?'s':''}`;
@@ -1738,7 +2023,7 @@ function showDetail(type,name){
     <div class="track-row detail-track-row${currentId===t.id?' playing':''}" data-id="${t.id}" onclick="playDetailTrack(${i})">
       <div class="tr-num">${i+1}</div>
       <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
-      <div class="tr-art" style="background:${gradFor(t.artist+t.album)}">🎵</div>
+      ${artDivHtml(t)}
       <div class="tr-info">
         <div class="tr-title">${esc(t.title)}</div>
         <div class="tr-artist-s">${esc(type==='album'?t.artist:t.album)}</div>
@@ -1763,15 +2048,20 @@ function playDetailTrack(i){ queue=[...detailTracks]; queueIdx=i; playFromQueue(
 
 /* ─── EDITOR LIST ─── */
 function renderEdList(){
-  document.getElementById('edList').innerHTML=tracks.map(t=>`
+  document.getElementById('edList').innerHTML=tracks.map(t=>{
+    const cover = getCover(t.filename);
+    const grad = gradFor(t.artist+t.album);
+    return `
     <div class="ed-row${edTrack&&edTrack.id===t.id?' selected':''}" data-id="${t.id}" onclick="selectEdTrack(${t.id})">
-      <div class="tr-art" style="background:${gradFor(t.artist+t.album)};width:36px;height:36px;border-radius:6px;font-size:14px;">🎵</div>
+      <div class="tr-art" style="${cover?'':'background:'+grad};width:36px;height:36px;border-radius:6px;font-size:14px;overflow:hidden;">
+        ${cover?`<img src="${esc(cover)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" onerror="this.parentElement.style.background='${grad}';this.remove();">`:'🎵'}
+      </div>
       <div class="tr-info">
         <div class="tr-title" style="font-size:13px;">${esc(t.title)}</div>
         <div class="tr-artist-s">${esc(t.artist)}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function openEditor(id){ selectEdTrack(id); showView('editor'); }
@@ -1785,6 +2075,18 @@ function selectEdTrack(id){
   document.getElementById('ed-year').value=edTrack.year;
   document.getElementById('ed-genre').value=edTrack.genre;
   document.getElementById('ed-file').value=edTrack.filename;
+  // Cover preview
+  const cover = getCover(edTrack.filename);
+  const grad = gradFor(edTrack.artist+edTrack.album);
+  const prev = document.getElementById('ed-cover-preview');
+  if(prev){
+    prev.style.background = cover ? '' : grad;
+    prev.innerHTML = cover
+      ? `<img src="${esc(cover)}" onerror="this.parentElement.style.background='${grad}';this.remove();">`
+      : '🎵';
+  }
+  const coverInput = document.getElementById('ed-cover');
+  if(coverInput) coverInput.value = cover||'';
   document.getElementById('edFormLabel').textContent=`Éditer : ${edTrack.title}`;
   document.getElementById('edPlaceholder').style.display='none';
   document.getElementById('edForm').style.display='block';
@@ -1793,17 +2095,20 @@ function selectEdTrack(id){
 
 function saveEdMeta(){
   if(!edTrack) return;
+  const coverVal = (document.getElementById('ed-cover')?.value||'').trim();
   const d={
     title:document.getElementById('ed-title').value.trim()||edTrack.title,
     artist:document.getElementById('ed-artist').value.trim()||edTrack.artist,
     album:document.getElementById('ed-album').value.trim()||edTrack.album,
     year:document.getElementById('ed-year').value.trim(),
     genre:document.getElementById('ed-genre').value.trim(),
+    ...(coverVal ? {cover: coverVal} : {}),
   };
   setTrackMeta(edTrack.filename,d);
   const t=tracks.find(x=>x.id===edTrack.id);
   Object.assign(t,d);
   edTrack=t;
+  if(coverVal) refreshCoverForTrack(edTrack.id, coverVal);
   filtered=[...tracks];
   applySort();
   renderAll();
@@ -1822,6 +2127,7 @@ function resetEdMeta(){
   applySort();
   renderAll();
   selectEdTrack(edTrack.id);
+  if(currentId===edTrack.id) updatePlayerUI(t);
   toast('↺ Métadonnées réinitialisées');
 }
 
@@ -1920,8 +2226,12 @@ function updatePlayerUI(t){
   document.getElementById('pTitle').textContent=t.title;
   document.getElementById('pArtist').textContent=t.artist+(t.album&&t.album!=='Sans album'?' · '+t.album:'');
   const art=document.getElementById('pArt');
-  art.style.background=gradFor(t.artist+t.album);
-  art.textContent='🎵';
+  const cover = getCover(t.filename);
+  const grad = gradFor(t.artist+t.album);
+  art.style.background = cover ? '' : grad;
+  art.innerHTML = cover
+    ? `<img src="${esc(cover)}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">`
+    : '🎵';
   art.classList.add('active');
   document.title=`${t.title} — Arya`;
   const b=document.getElementById('bannerText');
@@ -1973,6 +2283,7 @@ function setVol(v){
   audio.volume=v/100;
   const ico=document.getElementById('volIco');
   ico.textContent=v==0?'🔇':v<50?'🔉':'🔊';
+  if(v==0) showEyeClose();
 }
 
 function seekTo(e){
@@ -1988,6 +2299,7 @@ audio.addEventListener('timeupdate',()=>{
   document.getElementById('pFill').style.width=pct+'%';
   document.getElementById('pElapsed').textContent=fmtTime(audio.currentTime);
   document.getElementById('pDur').textContent=fmtTime(audio.duration);
+  check316(audio.currentTime);
   // Stat accumulation
   if(isPlaying && _statLastTS > 0){
     const delta = audio.currentTime - _statLastTS;
@@ -2047,9 +2359,13 @@ function renderDashboard(){
 
   let nowHtml = '';
   if(nowTrack){
+    const nCover = getCover(nowTrack.filename);
+    const nGrad = gradFor(nowTrack.artist+nowTrack.album);
     nowHtml = `
       <div class="dash-now" onclick="playTrack(${nowTrack.id})">
-        <div class="dash-now-art" style="background:${gradFor(nowTrack.artist+nowTrack.album)}">🎵</div>
+        <div class="dash-now-art" style="${nCover?'':'background:'+nGrad}">
+          ${nCover?`<img src="${esc(nCover)}" loading="lazy" onerror="this.parentElement.style.background='${nGrad}';this.remove();">`:'🎵'}
+        </div>
         <div style="min-width:0;flex:1;">
           <div class="dash-now-label">${curTrack?'En cours':'Dernière écoute'}</div>
           <div class="dash-now-title">${esc(nowTrack.title)}</div>
@@ -2118,9 +2434,13 @@ function renderDashboard(){
         <div class="dash-section-title">🏆 Vos top morceaux</div>
         ${topTracks.map((t,i)=>{
           const tr = tracks.find(x=>x.filename===t.filename);
+          const cover = tr ? getCover(tr.filename) : null;
+          const grad = gradFor(t.artist+t.filename);
           return `<div class="dash-mini-row" onclick="${tr?`playTrack(${tr.id})`:''}">
             <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);width:16px;text-align:center;flex-shrink:0;">${i+1}</div>
-            <div class="dash-mini-art" style="background:${gradFor(t.artist+(t.filename))}">🎵</div>
+            <div class="dash-mini-art" style="${cover?'':'background:'+grad}">
+              ${cover?`<img src="${esc(cover)}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">`:'🎵'}
+            </div>
             <div class="dash-mini-info">
               <div class="dash-mini-title">${esc(t.title)}</div>
               <div class="dash-mini-sub">${esc(t.artist)}</div>
@@ -2139,8 +2459,12 @@ function renderDashboard(){
         <div class="dash-section-title">🕐 Récemment écouté</div>
         ${h.slice(0,5).map(e=>{
           const tr = tracks.find(x=>x.filename===e.filename);
+          const cover = tr ? getCover(tr.filename) : null;
+          const grad = gradFor(e.artist+e.album);
           return `<div class="dash-mini-row" onclick="${tr?`playTrack(${tr.id})`:''}">
-            <div class="dash-mini-art" style="background:${gradFor(e.artist+e.album)}">🎵</div>
+            <div class="dash-mini-art" style="${cover?'':'background:'+grad}">
+              ${cover?`<img src="${esc(cover)}" loading="lazy" onerror="this.parentElement.style.background='${grad}';this.remove();">`:'🎵'}
+            </div>
             <div class="dash-mini-info">
               <div class="dash-mini-title">${esc(e.title)}</div>
               <div class="dash-mini-sub">${esc(e.artist)}</div>
@@ -2167,13 +2491,18 @@ function renderDashboard(){
           <span style="font-size:10px;color:var(--accent);cursor:pointer;font-weight:600;letter-spacing:.06em;" onclick="showView('artists')">Voir tout →</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:10px;margin-top:8px;">
-          ${arts.slice(0,12).map(a=>`
+          ${arts.slice(0,12).map(a=>{
+            const img = getArtistImg(a.name);
+            const grad = gradFor(a.name);
+            return `
             <div data-aname="${esc(a.name)}" data-atype="artist" onclick="showDetailFromEl(this)" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:8px 4px;border-radius:10px;transition:background .15s;" onmouseenter="this.style.background='var(--surface)'" onmouseleave="this.style.background='transparent'">
-              <div style="width:52px;height:52px;border-radius:50%;background:${gradFor(a.name)};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🎤</div>
+              <div style="width:52px;height:52px;border-radius:50%;overflow:hidden;${img?'':'background:'+grad};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;" data-artist-art="${escAttr(a.name)}">
+                ${img?`<img src="${esc(img)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.style.background='${grad}';this.remove();">`:'🎤'}
+              </div>
               <div style="font-size:11px;font-weight:600;text-align:center;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;max-width:72px;">${esc(a.name)}</div>
               <div style="font-size:10px;color:var(--text3);">${a.tracks.length} titre${a.tracks.length>1?'s':''}</div>
-            </div>
-          `).join('')}
+            </div>`;
+          }).join('')}
         </div>
       </div>`;
   }
@@ -2329,17 +2658,210 @@ document.addEventListener('keydown',e=>{
 ═══════════════════════════════════════════ */
 loadPseudo();
 fetchArchive();
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => {
-          console.log('Service Worker Arya enregistré avec succès', reg);
-        })
-        .catch(err => {
-          console.log('Erreur Service Worker :', err);
-        });
-    });
+
+/* ═══════════════════════════════════════════
+   🐺 EASTER EGGS — ARYA STARK
+   // pas aujourd'hui
+═══════════════════════════════════════════ */
+
+// ── BRAISES (canvas) ─────────────────────
+(function initEmbers(){
+  const canvas = document.getElementById('emberCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+  function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  function spawn(fromTop){
+    return { x:Math.random()*W, y:fromTop?-10:Math.random()*H, size:Math.random()*1.8+0.4,
+      speed:Math.random()*1.0+0.3, drift:(Math.random()-0.5)*0.5,
+      alpha:Math.random()*0.5+0.2, hue:Math.random()*30+8 };
   }
+  for(let i=0;i<22;i++) particles.push(spawn(false));
+  window._emberIntense = false;
+  (function frame(){
+    ctx.clearRect(0,0,W,H);
+    const target = window._emberIntense ? 90 : 22;
+    while(particles.length<target) particles.push(spawn(true));
+    while(particles.length>target && particles.length>22) particles.pop();
+    for(let i=0;i<particles.length;i++){
+      const p=particles[i]; p.y-=p.speed; p.x+=p.drift;
+      ctx.save();
+      ctx.globalAlpha = window._emberIntense ? p.alpha*0.9 : p.alpha*0.22;
+      ctx.fillStyle=`hsl(${p.hue},100%,62%)`;
+      ctx.shadowColor=`hsl(${p.hue},100%,60%)`;
+      ctx.shadowBlur=window._emberIntense?9:3;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      if(p.y<-10) particles[i]=spawn(true);
+    }
+    requestAnimationFrame(frame);
+  })();
+})();
+
+// ── SAISON → COULEUR DE LA BARRE ─────────
+(function applySeasonColor(){
+  const m = new Date().getMonth();
+  let c;
+  if(m>=2&&m<=4) c='#4ade80';       // Printemps — Vert Tyrell
+  else if(m>=5&&m<=7) c='#c44d6e';  // Été — Rouge Targaryen
+  else if(m>=8&&m<=10) c='#d4a054'; // Automne — Or Lannister
+  else c='#9aa5b4';                  // Hiver — Gris Stark
+  const s = document.createElement('style');
+  s.textContent=`.p-fill{background:${c}!important}.p-fill::after{background:${c}!important}.top-bar-fill{background:${c}!important}`;
+  document.head.appendChild(s);
+})();
+
+// ── 3:16 → NOCES ROUGES ──────────────────
+let _316shown = false;
+function check316(t){
+  const s = Math.floor(t);
+  if(s===196 && !_316shown){
+    _316shown = true;
+    const el = document.getElementById('pElapsed');
+    if(!el) return;
+    const orig = el.textContent;
+    el.textContent = '💀 Noces Rouges';
+    el.style.cssText = 'color:#c44d6e;font-size:9px;white-space:nowrap;';
+    setTimeout(()=>{ el.textContent=orig; el.style.cssText=''; _316shown=false; }, 3000);
+  }
+}
+
+// ── TRIPLE CLIC SUR LE LOGO ───────────────
+let _logoClicks=0, _logoTimer=null;
+function logoClick(){
+  _logoClicks++;
+  clearTimeout(_logoTimer);
+  _logoTimer = setTimeout(()=>{ _logoClicks=0; }, 700);
+  if(_logoClicks>=3){
+    _logoClicks=0;
+    const origDocTitle = document.title;
+    document.title = 'La Liste — Arya';
+    toast('📜 La Liste...');
+    const vt = document.getElementById('view-songs')?.querySelector('.view-title');
+    if(vt && vt.textContent==='Toutes les chansons'){
+      const orig=vt.textContent;
+      vt.textContent='La Liste';
+      setTimeout(()=>{ vt.textContent=orig; document.title=origDocTitle; }, 5000);
+    } else { setTimeout(()=>{ document.title=origDocTitle; }, 5000); }
+  }
+}
+
+// ── ŒIL QUI SE FERME (volume 0) ──────────
+function showEyeClose(){
+  let eye = document.getElementById('easterEye');
+  if(!eye){
+    eye=document.createElement('div'); eye.id='easterEye';
+    document.body.appendChild(eye);
+  }
+  eye.textContent='👁'; eye.style.opacity='1';
+  setTimeout(()=>{ eye.textContent='😑'; setTimeout(()=>{ eye.style.opacity='0'; },1400); },500);
+}
+
+// ── KONAMI CODE ───────────────────────────
+const _KONAMI=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let _konamiIdx=0, _konamiActive=false;
+function _checkKonami(key){
+  if(key===_KONAMI[_konamiIdx]) _konamiIdx++;
+  else { _konamiIdx=0; if(key===_KONAMI[0]) _konamiIdx=1; }
+  if(_konamiIdx===_KONAMI.length){
+    _konamiIdx=0; if(_konamiActive) return; _konamiActive=true;
+    window._emberIntense=true; audio.playbackRate=0.82;
+    toast('🔥 Valar Dohaeris');
+    setTimeout(()=>{ window._emberIntense=false; audio.playbackRate=1; _konamiActive=false; }, 9000);
+  }
+}
+
+// ── FRAPPE "valar" → SKIP ─────────────────
+let _keyBuf='';
+document.addEventListener('keydown', e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea') return;
+  _keyBuf+=e.key.toLowerCase();
+  if(_keyBuf.length>12) _keyBuf=_keyBuf.slice(-12);
+  if(_keyBuf.endsWith('valar')){
+    _keyBuf='';
+    toast('... morghulis 💀');
+    setTimeout(()=>nextTrack(), 900);
+  }
+  _checkKonami(e.key);
+});
+
+// ── INACTIVITÉ 10 MIN ─────────────────────
+let _inactTimer=null, _inactOverlay=null;
+function _resetInact(){
+  clearTimeout(_inactTimer);
+  if(_inactOverlay){
+    _inactOverlay.style.background='rgba(0,0,0,0)';
+    _inactOverlay.style.pointerEvents='none';
+    const msg=_inactOverlay.querySelector('#inactMsg');
+    if(msg) msg.style.color='rgba(245,239,232,0)';
+  }
+  _inactTimer=setTimeout(_showInact, 10*60*1000);
+}
+function _showInact(){
+  if(!_inactOverlay){
+    _inactOverlay=document.createElement('div');
+    _inactOverlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0);z-index:800;transition:background 3.5s ease;display:flex;align-items:flex-end;justify-content:flex-end;padding:44px;cursor:pointer;';
+    _inactOverlay.innerHTML='<span id="inactMsg" style="font-family:\'Cormorant Garamond\',serif;font-size:14px;color:rgba(245,239,232,0);letter-spacing:.16em;font-style:italic;transition:color 3.5s ease;">La fille a du travail.</span>';
+    _inactOverlay.addEventListener('click',_resetInact);
+    document.body.appendChild(_inactOverlay);
+  }
+  _inactOverlay.style.pointerEvents='auto';
+  requestAnimationFrame(()=>{
+    _inactOverlay.style.background='rgba(0,0,0,0.88)';
+    const msg=document.getElementById('inactMsg');
+    if(msg) msg.style.color='rgba(245,239,232,0.55)';
+  });
+}
+['click','keydown','mousemove','touchstart'].forEach(ev=>document.addEventListener(ev,_resetInact,{passive:true}));
+_resetInact();
+
+// ── 3 JOURS DE SUITE → COUTEAU ────────────
+(function checkStreak(){
+  const KEY='arya_visit_dates', today=new Date().toDateString();
+  let dates=[];
+  try{ dates=JSON.parse(localStorage.getItem(KEY)||'[]'); }catch{}
+  if(!dates.includes(today)){
+    dates.push(today);
+    if(dates.length>10) dates=dates.slice(-10);
+    localStorage.setItem(KEY,JSON.stringify(dates));
+  }
+  if(dates.length<3) return;
+  const sorted=[...dates].sort((a,b)=>new Date(a)-new Date(b));
+  let streak=1;
+  for(let i=sorted.length-1;i>0;i--){
+    const diff=Math.round((new Date(sorted[i])-new Date(sorted[i-1]))/86400000);
+    if(diff===1) streak++; else break;
+  }
+  if(streak>=3 && !sessionStorage.getItem('arya_knife')){
+    sessionStorage.setItem('arya_knife','1');
+    setTimeout(()=>{
+      const k=document.createElement('div');
+      k.style.cssText='position:fixed;top:50%;left:-80px;font-size:38px;z-index:9999;pointer-events:none;transform:translateY(-50%) scaleX(-1);animation:knifeSlash 1.3s ease-in-out forwards;';
+      k.textContent='🗡️';
+      document.body.appendChild(k);
+      setTimeout(()=>k.remove(),1400);
+    }, 1800);
+  }
+})();
+
+// ── PIXEL DU LOUP (1×1px caché) ──────────
+document.getElementById('wolfPixel').addEventListener('click',()=>{
+  try{
+    const ac=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ac.createOscillator(), g=ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.type='sine';
+    osc.frequency.setValueAtTime(300,ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(130,ac.currentTime+0.5);
+    osc.frequency.exponentialRampToValueAtTime(220,ac.currentTime+0.9);
+    osc.frequency.exponentialRampToValueAtTime(85,ac.currentTime+1.6);
+    g.gain.setValueAtTime(0.28,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+1.8);
+    osc.start(); osc.stop(ac.currentTime+1.8);
+  }catch(e){}
+});
 </script>
 </body>
 </html>
