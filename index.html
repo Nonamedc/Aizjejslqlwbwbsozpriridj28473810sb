@@ -712,10 +712,10 @@ body {
 
   <div class="nav-section">
     <div class="nav-label">Bibliothèque</div>
-    <div class="nav-item" data-view="dashboard" onclick="showView('dashboard')">
+    <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
       <span class="nav-icon">🏠</span> Accueil
     </div>
-    <div class="nav-item active" data-view="songs" onclick="showView('songs')">
+    <div class="nav-item" data-view="songs" onclick="showView('songs')">
       <span class="nav-icon">🎵</span> Chansons
     </div>
     <div class="nav-item" data-view="albums" onclick="showView('albums')">
@@ -780,7 +780,7 @@ body {
   </div>
 
   <!-- ── DASHBOARD VIEW ── -->
-  <div class="view" id="view-dashboard">
+  <div class="view active" id="view-dashboard">
     <div class="view-header">
       <div class="view-title">Bonjour 👋</div>
       <div class="view-sub" id="dashGreeting">Que voulez-vous écouter ?</div>
@@ -789,7 +789,7 @@ body {
   </div>
 
   <!-- ── SONGS VIEW ── -->
-  <div class="view active" id="view-songs">
+  <div class="view" id="view-songs">
     <div class="view-header">
       <div class="view-title">Toutes les chansons</div>
       <div class="view-sub" id="songCount">Chargement…</div>
@@ -1004,10 +1004,10 @@ body {
 
 <!-- MOBILE NAV -->
 <nav class="mobile-nav">
-  <button class="mn-btn" data-view="dashboard" onclick="showView('dashboard')">
+  <button class="mn-btn active" data-view="dashboard" onclick="showView('dashboard')">
     <span class="mn-ico">🏠</span>Accueil
   </button>
-  <button class="mn-btn active" data-view="songs" onclick="showView('songs')">
+  <button class="mn-btn" data-view="songs" onclick="showView('songs')">
     <span class="mn-ico">🎵</span>Chansons
   </button>
   <button class="mn-btn" data-view="favorites" onclick="showView('favorites')">
@@ -1049,7 +1049,7 @@ let queue        = [];
 let queueIdx     = -1;
 let sortField    = 'title';
 let sortDir      = 1;
-let prevView     = 'songs';
+let prevView     = 'dashboard';
 let detailTracks = [];
 let edTrack      = null;
 let pseudo       = '';
@@ -1623,6 +1623,7 @@ function renderAll(){
   renderEdList();
   renderFavorites();
   renderHistory();
+  renderDashboard();
 }
 
 /* ─── SONGS ─── */
@@ -1673,7 +1674,7 @@ function getAlbums(){
 function renderAlbums(){
   const albs=getAlbums();
   document.getElementById('albumGrid').innerHTML=albs.map(a=>`
-    <div class="g-card" onclick="showDetail('album','${esc(a.name).replace(/'/g,"&#39;")}')">
+    <div class="g-card" data-aname="${esc(a.name)}" data-atype="album" onclick="showDetailFromEl(this)">
       <div class="g-art" style="background:${gradFor(a.name)}">💿</div>
       <div class="g-name">${esc(a.name)}</div>
       <div class="g-sub">${esc(a.artist)} · ${a.count} titre${a.count>1?'s':''}</div>
@@ -1694,12 +1695,16 @@ function getArtists(){
 function renderArtists(){
   const arts=getArtists();
   document.getElementById('artistGrid').innerHTML=arts.map(a=>`
-    <div class="g-card g-artist" onclick="showDetail('artist','${esc(a.name).replace(/'/g,"&#39;")}')">
+    <div class="g-card g-artist" data-aname="${esc(a.name)}" data-atype="artist" onclick="showDetailFromEl(this)">
       <div class="g-art" style="background:${gradFor(a.name)};border-radius:50%;">🎤</div>
       <div class="g-name">${esc(a.name)}</div>
       <div class="g-sub">${a.albums.size} album${a.albums.size>1?'s':''} · ${a.tracks.length} titre${a.tracks.length>1?'s':''}</div>
     </div>
   `).join('');
+}
+
+function showDetailFromEl(el){
+  showDetail(el.dataset.atype, el.dataset.aname);
 }
 
 /* ─── DETAIL ─── */
@@ -2146,8 +2151,30 @@ function renderDashboard(){
       🎵<br>Commencez à écouter pour voir vos stats ici
     </div>` : '';
 
+  // Artists section
+  const arts = getArtists();
+  let artistsHtml = '';
+  if(arts.length){
+    artistsHtml = `
+      <div class="dash-section">
+        <div class="dash-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>🎤 Artistes</span>
+          <span style="font-size:10px;color:var(--accent);cursor:pointer;font-weight:600;letter-spacing:.06em;" onclick="showView('artists')">Voir tout →</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:10px;margin-top:8px;">
+          ${arts.slice(0,12).map(a=>`
+            <div data-aname="${esc(a.name)}" data-atype="artist" onclick="showDetailFromEl(this)" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:8px 4px;border-radius:10px;transition:background .15s;" onmouseenter="this.style.background='var(--surface)'" onmouseleave="this.style.background='transparent'">
+              <div style="width:52px;height:52px;border-radius:50%;background:${gradFor(a.name)};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🎤</div>
+              <div style="font-size:11px;font-weight:600;text-align:center;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;max-width:72px;">${esc(a.name)}</div>
+              <div style="font-size:10px;color:var(--text3);">${a.tracks.length} titre${a.tracks.length>1?'s':''}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  }
+
   document.getElementById('dashContent').innerHTML =
-    nowHtml + kpiHtml + scHtml + topHtml + recentHtml + emptyHtml;
+    nowHtml + kpiHtml + scHtml + artistsHtml + topHtml + recentHtml + emptyHtml;
 }
 
 /* ═══════════════════════════════════════════
