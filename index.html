@@ -520,6 +520,65 @@ body {
 @keyframes artPulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--accent-rgb),.4)}50%{box-shadow:0 0 0 6px rgba(var(--accent-rgb),0)}}
 .p-art.playing-pulse{animation:artPulse 2s ease-in-out infinite;}
 
+/* ══════════════ DASHBOARD ══════════════ */
+.dash-now{
+  background:linear-gradient(135deg,rgba(212,160,84,.13),rgba(196,77,110,.07));
+  border:1px solid rgba(212,160,84,.25);
+  border-radius:14px;padding:18px;
+  display:flex;gap:14px;align-items:center;
+  margin-bottom:18px;
+}
+.dash-now-art{
+  width:64px;height:64px;border-radius:10px;
+  background:var(--surface);display:flex;align-items:center;
+  justify-content:center;font-size:26px;flex-shrink:0;
+}
+.dash-now-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.dash-now-title{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dash-now-artist{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dash-now-empty{font-size:13px;color:var(--text3);font-style:italic;}
+
+.dash-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.dash-kpi{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:14px 10px;text-align:center;
+}
+.dash-kpi-val{font-size:20px;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace;line-height:1.1;}
+.dash-kpi-lbl{font-size:10px;color:var(--text2);margin-top:4px;}
+
+.dash-section{margin-bottom:20px;}
+.dash-section-title{
+  font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:10px;
+}
+.dash-mini-row{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:8px;cursor:pointer;
+  transition:background .13s;
+}
+.dash-mini-row:hover{background:var(--surface);}
+.dash-mini-art{
+  width:36px;height:36px;border-radius:7px;
+  background:var(--surface);display:flex;align-items:center;
+  justify-content:center;font-size:14px;flex-shrink:0;
+}
+.dash-mini-info{flex:1;min-width:0;}
+.dash-mini-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dash-mini-sub{font-size:11px;color:var(--text2);margin-top:1px;}
+.dash-mini-count{font-size:11px;color:var(--accent);font-weight:700;white-space:nowrap;font-family:'JetBrains Mono',monospace;}
+
+.dash-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.dash-sc{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:14px;
+  display:flex;align-items:center;gap:10px;
+  cursor:pointer;transition:all .18s;
+}
+.dash-sc:hover{border-color:rgba(var(--accent-rgb),.4);background:var(--surface);}
+.dash-sc-ico{font-size:20px;}
+.dash-sc-label{font-size:12.5px;font-weight:500;}
+.dash-sc-sub{font-size:10.5px;color:var(--text2);}
+
 /* ══════════════ MOBILE NAV ══════════════ */
 .mobile-nav{
   display:none;
@@ -653,6 +712,9 @@ body {
 
   <div class="nav-section">
     <div class="nav-label">Bibliothèque</div>
+    <div class="nav-item" data-view="dashboard" onclick="showView('dashboard')">
+      <span class="nav-icon">🏠</span> Accueil
+    </div>
     <div class="nav-item active" data-view="songs" onclick="showView('songs')">
       <span class="nav-icon">🎵</span> Chansons
     </div>
@@ -715,6 +777,15 @@ body {
     <div class="party-banner-pulse"></div>
     <span id="partyBannerText">🎉 Mode Fête actif</span>
     <span class="party-banner-leave" onclick="leaveOrStopParty()">Quitter</span>
+  </div>
+
+  <!-- ── DASHBOARD VIEW ── -->
+  <div class="view" id="view-dashboard">
+    <div class="view-header">
+      <div class="view-title">Bonjour 👋</div>
+      <div class="view-sub" id="dashGreeting">Que voulez-vous écouter ?</div>
+    </div>
+    <div id="dashContent"></div>
   </div>
 
   <!-- ── SONGS VIEW ── -->
@@ -933,6 +1004,9 @@ body {
 
 <!-- MOBILE NAV -->
 <nav class="mobile-nav">
+  <button class="mn-btn" data-view="dashboard" onclick="showView('dashboard')">
+    <span class="mn-ico">🏠</span>Accueil
+  </button>
   <button class="mn-btn active" data-view="songs" onclick="showView('songs')">
     <span class="mn-ico">🎵</span>Chansons
   </button>
@@ -944,9 +1018,6 @@ body {
   </button>
   <button class="mn-btn" data-view="party" onclick="showView('party')">
     <span class="mn-ico">🎉</span>Fête
-  </button>
-  <button class="mn-btn" data-view="online" onclick="showView('online')">
-    <span class="mn-ico">🌐</span>En ligne
   </button>
 </nav>
 
@@ -1004,6 +1075,7 @@ audio.volume = 0.8;
    UTILS
 ═══════════════════════════════════════════ */
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return esc(s).replace(/'/g,'&#39;'); }
 
 function fmtTime(s){
   if(!s||isNaN(s)) return '0:00';
@@ -1454,7 +1526,7 @@ function renderPartyView(){
               <div class="party-user-name">${esc(u.pseudo)}</div>
               <div class="party-user-track">${u.track?`🎵 ${esc(u.track.title)}`:'En attente…'}</div>
             </div>
-            <button class="btn btn-acc" style="font-size:12px;padding:6px 14px;" onclick="joinParty('${esc(u.pseudo).replace(/'/g,"\\'")}')">Rejoindre</button>
+            <button class="btn btn-acc" style="font-size:12px;padding:6px 14px;" onclick="joinParty('${escAttr(u.pseudo)}')">Rejoindre</button>
           </div>
         `).join('')}
       ` : `<div class="party-empty">Aucune fête en cours<br><small style="color:var(--text3);">Soyez le premier à en démarrer une !</small></div>`}
@@ -1841,7 +1913,6 @@ function updatePlayerUI(t){
   art.style.background=gradFor(t.artist+t.album);
   art.textContent='🎵';
   art.classList.add('active');
-  document.getElementById('btnPlay').textContent='⏸';
   document.title=`${t.title} — Arya`;
   const b=document.getElementById('bannerText');
   b.textContent=`▶ ${t.title}`;
@@ -1942,6 +2013,144 @@ audio.addEventListener('pause',()=>{
 });
 
 /* ═══════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════ */
+function renderDashboard(){
+  const s = getStats();
+  const h = getHistory();
+  const favs = getFavs();
+  const entries = Object.entries(s).map(([fn,d])=>({...d,filename:fn}));
+  const totalPlays = entries.reduce((a,e)=>a+(e.plays||0),0);
+  const totalSec = entries.reduce((a,e)=>a+(e.seconds||0),0);
+  const topTracks = [...entries].sort((a,b)=>b.plays-a.plays).slice(0,5);
+  const onlineCount = Object.keys(onlineUsers).length;
+
+  // Greeting by hour
+  const hr = new Date().getHours();
+  const greet = hr<6?'Bonne nuit 🌙':hr<12?'Bonjour ☀️':hr<18?'Bon après-midi 🌤':' Bonne soirée 🌆';
+  document.getElementById('dashGreeting').textContent = pseudo ? `${greet}, ${pseudo}` : greet;
+
+  // Currently playing
+  const curTrack = currentId!=null ? tracks.find(t=>t.id===currentId) : null;
+  const lastPlay = !curTrack && h.length ? tracks.find(t=>t.filename===h[0].filename) : null;
+  const nowTrack = curTrack || lastPlay;
+
+  let nowHtml = '';
+  if(nowTrack){
+    nowHtml = `
+      <div class="dash-now" onclick="playTrack(${nowTrack.id})">
+        <div class="dash-now-art" style="background:${gradFor(nowTrack.artist+nowTrack.album)}">🎵</div>
+        <div style="min-width:0;flex:1;">
+          <div class="dash-now-label">${curTrack?'En cours':'Dernière écoute'}</div>
+          <div class="dash-now-title">${esc(nowTrack.title)}</div>
+          <div class="dash-now-artist">${esc(nowTrack.artist)}</div>
+        </div>
+        <button class="p-btn p-play" style="width:38px;height:38px;font-size:14px;flex-shrink:0;" onclick="event.stopPropagation();${curTrack?'togglePlay()':'playTrack('+nowTrack.id+')'}">${isPlaying&&curTrack?'⏸':'▶'}</button>
+      </div>`;
+  }
+
+  // KPIs
+  const kpiHtml = `
+    <div class="dash-kpis">
+      <div class="dash-kpi">
+        <div class="dash-kpi-val">${totalPlays}</div>
+        <div class="dash-kpi-lbl">écoutes</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-val">${fmtDuration(totalSec)}</div>
+        <div class="dash-kpi-lbl">temps total</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-val">${tracks.length}</div>
+        <div class="dash-kpi-lbl">titres</div>
+      </div>
+    </div>`;
+
+  // Shortcuts
+  const scHtml = `
+    <div class="dash-shortcuts">
+      <div class="dash-sc" onclick="showView('favorites')">
+        <span class="dash-sc-ico">❤️</span>
+        <div>
+          <div class="dash-sc-label">Favoris</div>
+          <div class="dash-sc-sub">${favs.size} titre${favs.size>1?'s':''}</div>
+        </div>
+      </div>
+      <div class="dash-sc" onclick="showView('online')">
+        <span class="dash-sc-ico">🌐</span>
+        <div>
+          <div class="dash-sc-label">En ligne</div>
+          <div class="dash-sc-sub">${onlineCount} connecté${onlineCount>1?'s':''}</div>
+        </div>
+      </div>
+      <div class="dash-sc" onclick="showView('history')">
+        <span class="dash-sc-ico">🕐</span>
+        <div>
+          <div class="dash-sc-label">Historique</div>
+          <div class="dash-sc-sub">${h.length} lecture${h.length>1?'s':''}</div>
+        </div>
+      </div>
+      <div class="dash-sc" onclick="showView('party')">
+        <span class="dash-sc-ico">🎉</span>
+        <div>
+          <div class="dash-sc-label">Mode Fête</div>
+          <div class="dash-sc-sub">${partyMode?'Actif':'Inactif'}</div>
+        </div>
+      </div>
+    </div>`;
+
+  // Top tracks
+  let topHtml = '';
+  if(topTracks.length){
+    const maxP = topTracks[0].plays||1;
+    topHtml = `
+      <div class="dash-section">
+        <div class="dash-section-title">🏆 Vos top morceaux</div>
+        ${topTracks.map((t,i)=>{
+          const tr = tracks.find(x=>x.filename===t.filename);
+          return `<div class="dash-mini-row" onclick="${tr?`playTrack(${tr.id})`:''}">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);width:16px;text-align:center;flex-shrink:0;">${i+1}</div>
+            <div class="dash-mini-art" style="background:${gradFor(t.artist+(t.filename))}">🎵</div>
+            <div class="dash-mini-info">
+              <div class="dash-mini-title">${esc(t.title)}</div>
+              <div class="dash-mini-sub">${esc(t.artist)}</div>
+            </div>
+            <div class="dash-mini-count">${t.plays}×</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  // Recent history
+  let recentHtml = '';
+  if(h.length){
+    recentHtml = `
+      <div class="dash-section">
+        <div class="dash-section-title">🕐 Récemment écouté</div>
+        ${h.slice(0,5).map(e=>{
+          const tr = tracks.find(x=>x.filename===e.filename);
+          return `<div class="dash-mini-row" onclick="${tr?`playTrack(${tr.id})`:''}">
+            <div class="dash-mini-art" style="background:${gradFor(e.artist+e.album)}">🎵</div>
+            <div class="dash-mini-info">
+              <div class="dash-mini-title">${esc(e.title)}</div>
+              <div class="dash-mini-sub">${esc(e.artist)}</div>
+            </div>
+            <div class="dash-mini-count" style="color:var(--text3);font-family:'Outfit',sans-serif;font-weight:400;font-size:11px;">${relTime(e.ts)}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  const emptyHtml = (!totalPlays && !h.length) ? `
+    <div style="color:var(--text3);text-align:center;padding:40px 0;font-size:14px;line-height:2.2;">
+      🎵<br>Commencez à écouter pour voir vos stats ici
+    </div>` : '';
+
+  document.getElementById('dashContent').innerHTML =
+    nowHtml + kpiHtml + scHtml + topHtml + recentHtml + emptyHtml;
+}
+
+/* ═══════════════════════════════════════════
    NAVIGATION
 ═══════════════════════════════════════════ */
 function showView(name){
@@ -1953,6 +2162,7 @@ function showView(name){
   document.querySelectorAll(`.nav-item[data-view="${name}"]`).forEach(n=>n.classList.add('active'));
   prevView=name;
   // Lazy render for heavy views
+  if(name === 'dashboard') renderDashboard();
   if(name === 'stats') renderStats();
   if(name === 'history') renderHistory();
   if(name === 'favorites') renderFavorites();
@@ -2065,7 +2275,7 @@ function renderOnline(){
         <div class="o-avatar">${(u.pseudo||'?')[0].toUpperCase()}</div>
         <div class="o-name">${esc(u.pseudo||id)}${isMe?' <span style="font-size:11px;color:var(--accent);">(vous)</span>':''}${u.party?' 🎉':''}</div>
         <div class="o-now">${u.track?`🎵 ${esc(u.track.title)}<br><span style="opacity:.7;">${esc(u.track.artist)}</span>`:'<span style="color:var(--text3);">Inactif</span>'}</div>
-        <div class="o-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--green);"></div>En ligne${u.party&&!isMe?` · <span style="color:var(--rose);cursor:pointer;" onclick="joinParty('${esc(u.pseudo).replace(/'/g,"\\'")}')">Rejoindre la fête</span>`:''}</div>
+        <div class="o-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--green);"></div>En ligne${u.party&&!isMe?` · <span style="color:var(--rose);cursor:pointer;" onclick="joinParty('${escAttr(u.pseudo)}')">Rejoindre la fête</span>`:''}</div>
       </div>
     `;
   }).join('')||(count===0?`<div style="color:var(--text3);font-size:14px;padding:40px 0;">Personne d'autre en ligne pour l'instant</div>`:'');
