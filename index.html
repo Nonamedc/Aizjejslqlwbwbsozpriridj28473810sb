@@ -146,6 +146,27 @@ body {
 .search-input:focus{border-color:var(--accent);}
 .search-input::placeholder{color:var(--text3);}
 
+/* Party banner (below sticky bar) */
+.party-banner{
+  background:linear-gradient(90deg,rgba(196,77,110,.18),rgba(212,160,84,.08));
+  border-bottom:1px solid rgba(196,77,110,.3);
+  padding:8px 28px;
+  display:none;align-items:center;gap:10px;
+  font-size:13px;color:var(--rose);
+  flex-shrink:0;
+}
+.party-banner-pulse{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--rose);flex-shrink:0;
+  animation:pulse 1.6s ease-in-out infinite;
+}
+.party-banner-leave{
+  margin-left:auto;font-size:12px;color:var(--text3);
+  cursor:pointer;padding:3px 10px;border-radius:12px;
+  border:1px solid var(--border);transition:all .15s;
+}
+.party-banner-leave:hover{border-color:var(--rose);color:var(--rose);}
+
 .view{display:none;padding:24px 28px 40px;flex:1;}
 .view.active{display:block;}
 
@@ -234,6 +255,11 @@ body {
 .ico-btn:hover{background:var(--border);color:var(--text);}
 .ico-btn.edit:hover{color:var(--accent);}
 
+/* ── FAV BUTTON ── */
+.ico-btn.fav-btn{color:var(--text3);font-size:15px;}
+.ico-btn.fav-btn:hover{color:var(--rose)!important;background:var(--rose-glow)!important;}
+.ico-btn.fav-btn.active{color:var(--rose);}
+
 /* Loading */
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:50vh;gap:18px;}
 .spinner{width:44px;height:44px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.75s linear infinite;}
@@ -275,9 +301,50 @@ body {
 .btn-acc:hover{background:#e5b06a;}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2);}
 .btn-ghost:hover{border-color:var(--text);color:var(--text);}
+.btn-rose{background:var(--rose);color:#fff;}
+.btn-rose:hover{background:#d4607f;}
 
 .detail-col-heads{grid-template-columns:36px 44px 1fr 180px 60px;}
 .detail-track-row{grid-template-columns:36px 44px 1fr 180px 60px;}
+
+/* ── HISTORY VIEW ── */
+.hist-col-heads{grid-template-columns:36px 44px 1fr 180px 110px 70px;}
+.hist-track-row{grid-template-columns:36px 44px 1fr 180px 110px 70px;}
+
+/* ── STATS VIEW ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-bottom:28px;}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:18px;
+}
+.stat-icon{font-size:26px;margin-bottom:8px;}
+.stat-val{font-size:26px;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace;line-height:1;}
+.stat-label{font-size:11.5px;color:var(--text2);margin-top:4px;}
+.stats-section-label{
+  font-size:10px;font-weight:600;letter-spacing:0.14em;
+  text-transform:uppercase;color:var(--text3);margin-bottom:12px;
+}
+.top-track-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px;margin-bottom:8px;
+}
+.top-bar-wrap{flex:1;min-width:0;}
+.top-bar-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+.top-bar-sub{font-size:11px;color:var(--text2);margin-bottom:5px;}
+.top-bar-bg{height:3px;background:var(--border);border-radius:2px;}
+.top-bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .6s ease;}
+.top-count{font-size:12px;color:var(--accent);font-weight:700;white-space:nowrap;}
+.top-artist-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px;margin-bottom:8px;
+}
+.top-artist-av{
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;flex-shrink:0;
+}
 
 /* ── ONLINE VIEW ── */
 .online-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:14px;margin-top:4px;}
@@ -287,6 +354,7 @@ body {
   transition:border-color 0.2s;
 }
 .o-card.me{border-color:rgba(var(--accent-rgb),.5);background:var(--accent-glow);}
+.o-card.hosting{border-color:rgba(196,77,110,.5);background:var(--rose-glow);}
 .o-avatar{
   width:48px;height:48px;border-radius:50%;
   background:linear-gradient(135deg,var(--accent),var(--rose));
@@ -297,6 +365,34 @@ body {
 .o-name{font-size:14px;font-weight:600;margin-bottom:3px;}
 .o-now{font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.4;}
 .o-status{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green);}
+
+/* ── PARTY VIEW ── */
+.party-hero{
+  background:linear-gradient(135deg,rgba(196,77,110,.15),rgba(212,160,84,.08));
+  border:1px solid rgba(196,77,110,.25);
+  border-radius:14px;padding:28px;margin-bottom:24px;
+  display:flex;align-items:center;gap:22px;
+}
+.party-hero-ico{font-size:52px;flex-shrink:0;}
+.party-hero-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:6px;}
+.party-hero-sub{font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;}
+.party-users-title{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+.party-user-card{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:12px 14px;margin-bottom:8px;
+}
+.party-user-av{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--rose));
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;color:#000;flex-shrink:0;
+  font-family:'Cormorant Garamond',serif;
+}
+.party-user-av.hosting-av{background:linear-gradient(135deg,var(--rose),#8b2d4a);}
+.party-user-name{font-size:13.5px;font-weight:600;}
+.party-user-track{font-size:11.5px;color:var(--text2);margin-top:2px;}
+.party-empty{color:var(--text3);text-align:center;padding:40px;font-size:13.5px;}
 
 /* ── EDITOR VIEW ── */
 .editor-layout{display:grid;grid-template-columns:1fr 1.1fr;gap:24px;min-height:60vh;}
@@ -330,7 +426,7 @@ body {
   backdrop-filter:blur(20px);
   border-top:1px solid var(--border);
   display:grid;
-  grid-template-columns:280px 1fr 200px;
+  grid-template-columns:280px 1fr 220px;
   align-items:center;
   padding:0 20px;gap:16px;
 }
@@ -430,14 +526,15 @@ body {
   background:var(--bg2);
   border-top:1px solid var(--border);
   justify-content:space-around;align-items:center;
-  z-index:50;
+  z-index:50;overflow-x:auto;
 }
 .mn-btn{
-  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  flex:1;min-width:54px;display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:7px 4px;cursor:pointer;color:var(--text3);
   font-size:10px;font-weight:500;letter-spacing:0.04em;
   border:none;background:none;transition:color 0.18s;
   touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  white-space:nowrap;
 }
 .mn-btn.active{color:var(--accent);}
 .mn-ico{font-size:20px;line-height:1;}
@@ -445,100 +542,71 @@ body {
 /* ══════════════ RESPONSIVE MOBILE ══════════════ */
 @media(max-width:640px){
   :root{--player-h:108px;}
-
   html,body{overflow:hidden;}
-
-  body{
-    grid-template-columns:1fr;
-    grid-template-rows:1fr var(--player-h) 56px;
-  }
-
-  /* Sidebar → caché */
+  body{grid-template-columns:1fr;grid-template-rows:1fr var(--player-h) 56px;}
   .sidebar{display:none;}
-
-  /* Nav mobile → visible */
   .mobile-nav{display:flex;grid-column:1;grid-row:3;}
-
-  /* Main */
   .main{grid-column:1;grid-row:1;}
 
-  /* Sticky bar */
   .sticky-bar{padding:10px 14px;gap:8px;}
   .search-input{font-size:14px;padding:10px 14px 10px 38px;border-radius:20px;}
   .search-wrap{max-width:none;}
 
-  /* Views */
+  .party-banner{padding:7px 14px;font-size:12px;}
+
   .view{padding:14px 14px 80px;}
   .view-title{font-size:26px;}
   .view-sub{font-size:12px;}
 
-  /* Sort pills: scroll horizontal */
   .sort-pills{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;gap:8px;scrollbar-width:none;}
   .sort-pills::-webkit-scrollbar{display:none;}
   .sort-pill{white-space:nowrap;padding:7px 16px;font-size:13px;}
 
-  /* Col heads — 4 colonnes: # | art | info | durée */
-  .col-heads{
-    grid-template-columns:24px 36px 1fr 48px;
-    gap:8px;padding:5px 8px;
-  }
-  .col-heads>:nth-child(4),
-  .col-heads>:nth-child(5){display:none;}
+  .col-heads{grid-template-columns:24px 36px 1fr 48px;gap:8px;padding:5px 8px;}
+  .col-heads>:nth-child(4),.col-heads>:nth-child(5){display:none;}
 
-  /* Track rows */
-  .track-row{
-    grid-template-columns:24px 36px 1fr 48px;
-    gap:8px;padding:9px 8px;
-  }
-  .track-row .tr-artist,
-  .track-row .tr-album{display:none;}
-  .tr-actions{opacity:1;} /* toujours visible sur tactile */
+  .track-row{grid-template-columns:24px 36px 1fr 48px;gap:8px;padding:9px 8px;}
+  .track-row .tr-artist,.track-row .tr-album{display:none;}
+  .tr-actions{opacity:1;}
   .tr-art{width:36px;height:36px;font-size:15px;}
   .tr-title{font-size:13px;}
   .tr-artist-s{font-size:11px;}
   .ico-btn{width:34px;height:34px;font-size:14px;}
 
-  /* Grid albums/artistes */
+  .hist-col-heads,.hist-track-row{grid-template-columns:24px 36px 1fr 48px !important;gap:8px;}
+  .hist-col-heads>:nth-child(4),.hist-col-heads>:nth-child(5),.hist-track-row .tr-artist,.hist-track-row .tr-album{display:none;}
+
   .grid-cards{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;}
   .g-art{font-size:28px;}
   .g-name{font-size:12.5px;}
 
-  /* Detail hero */
   .detail-hero{flex-direction:column;align-items:flex-start;gap:14px;padding-bottom:14px;margin-bottom:18px;}
   .detail-art{width:88px;height:88px;font-size:36px;}
   .detail-name{font-size:24px;}
   .detail-meta-sub{font-size:12px;margin-bottom:12px;}
-  .detail-acts{gap:8px;}
   .btn{padding:10px 18px;font-size:13.5px;}
 
-  /* Detail track rows */
-  .detail-col-heads,
-  .detail-track-row{
-    grid-template-columns:24px 36px 1fr 48px !important;
-    gap:8px;
-  }
-  .detail-col-heads>:nth-child(4),
-  .detail-track-row .tr-artist{display:none;}
+  .detail-col-heads,.detail-track-row{grid-template-columns:24px 36px 1fr 48px !important;gap:8px;}
+  .detail-col-heads>:nth-child(4),.detail-track-row .tr-artist{display:none;}
 
-  /* Editor: colonne unique */
+  .stats-grid{grid-template-columns:repeat(3,1fr);}
+  .stat-val{font-size:18px;}
+  .stat-card{padding:12px;}
+
+  .party-hero{flex-direction:column;gap:12px;padding:20px;}
   .editor-layout{grid-template-columns:1fr;gap:16px;min-height:unset;}
   .ed-list{max-height:220px;}
   .form-row{grid-template-columns:1fr;}
 
-  /* Online */
   .online-grid{grid-template-columns:1fr 1fr;gap:10px;}
   .o-card{padding:14px;}
   .o-avatar{width:38px;height:38px;font-size:16px;margin-bottom:8px;}
   .o-name{font-size:13px;}
 
-  /* Player — flex colonne */
   .player{
     grid-column:1;grid-row:2;
-    display:flex !important;
-    flex-direction:column;
-    padding:8px 14px 6px;
-    gap:5px;
-    align-items:stretch;
+    display:flex !important;flex-direction:column;
+    padding:8px 14px 6px;gap:5px;align-items:stretch;
   }
   .p-right{display:none;}
   .p-info{flex:none;gap:10px;}
@@ -547,21 +615,16 @@ body {
   .p-artist{font-size:11px;margin-top:1px;}
   .p-center{width:100%;gap:5px;}
   .p-btns{justify-content:center;gap:22px;}
-  #btnShuffle,#btnRepeat{display:none;}
+  #btnShuffle,#btnRepeat,#btnParty{display:none;}
   .p-play{width:36px;height:36px;font-size:14px;}
   .p-btn{font-size:16px;}
   .p-time{font-size:10px;width:26px;}
   .p-track{height:3px;}
   .p-track:hover{height:3px;}
 
-  /* Toast au-dessus de la nav mobile */
   .toasts{bottom:66px;}
-
-  /* Modal */
   .modal-box{padding:22px 18px;border-radius:12px;}
   .modal-title{font-size:22px;margin-bottom:16px;}
-
-  /* Pseudo screen */
   .pseudo-box{padding:28px 20px;}
   .pseudo-h{font-size:24px;}
   .pseudo-sub{font-size:13px;}
@@ -599,10 +662,24 @@ body {
     <div class="nav-item" data-view="artists" onclick="showView('artists')">
       <span class="nav-icon">🎤</span> Artistes
     </div>
+    <div class="nav-item" data-view="favorites" onclick="showView('favorites')">
+      <span class="nav-icon">❤️</span> Favoris
+      <span class="nav-badge" id="favBadge" style="display:none;">0</span>
+    </div>
+    <div class="nav-item" data-view="history" onclick="showView('history')">
+      <span class="nav-icon">🕐</span> Historique
+    </div>
   </div>
 
   <div class="nav-section" style="margin-top:8px;">
     <div class="nav-label">Outils</div>
+    <div class="nav-item" data-view="stats" onclick="showView('stats')">
+      <span class="nav-icon">📊</span> Statistiques
+    </div>
+    <div class="nav-item" data-view="party" onclick="showView('party')">
+      <span class="nav-icon">🎉</span> Mode Fête
+      <div class="online-dot" id="partyDot" style="display:none;background:var(--rose);box-shadow:0 0 6px var(--rose);"></div>
+    </div>
     <div class="nav-item" data-view="editor" onclick="showView('editor')">
       <span class="nav-icon">✏️</span> Éditeur méta
     </div>
@@ -631,6 +708,13 @@ body {
     <div id="playingBanner" style="display:none;margin-left:auto;font-size:12.5px;color:var(--text2);display:flex;align-items:center;gap:8px;">
       <span id="bannerText"></span>
     </div>
+  </div>
+
+  <!-- Party banner -->
+  <div class="party-banner" id="partyBanner">
+    <div class="party-banner-pulse"></div>
+    <span id="partyBannerText">🎉 Mode Fête actif</span>
+    <span class="party-banner-leave" onclick="leaveOrStopParty()">Quitter</span>
   </div>
 
   <!-- ── SONGS VIEW ── -->
@@ -693,6 +777,53 @@ body {
       <div>#</div><div></div><div>Titre</div><div>Info</div><div style="text-align:right">Durée</div>
     </div>
     <div class="track-list" id="detailList"></div>
+  </div>
+
+  <!-- ── FAVORITES VIEW ── -->
+  <div class="view" id="view-favorites">
+    <div class="view-header">
+      <div class="view-title">❤️ Favoris</div>
+      <div class="view-sub" id="favCount">—</div>
+    </div>
+    <div class="col-heads">
+      <div>#</div><div></div>
+      <div>Titre</div><div>Artiste</div><div>Album</div><div style="text-align:right">Durée</div>
+    </div>
+    <div class="track-list" id="favList"></div>
+  </div>
+
+  <!-- ── HISTORY VIEW ── -->
+  <div class="view" id="view-history">
+    <div class="view-header">
+      <div class="view-title">🕐 Historique</div>
+      <div class="view-sub" id="histCount">—</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn btn-ghost" onclick="clearHistory()" style="font-size:12px;padding:6px 14px;">🗑 Effacer</button>
+    </div>
+    <div class="col-heads hist-col-heads">
+      <div>#</div><div></div>
+      <div>Titre</div><div>Artiste</div><div>Quand</div><div style="text-align:right">Heure</div>
+    </div>
+    <div class="track-list" id="histList"></div>
+  </div>
+
+  <!-- ── STATS VIEW ── -->
+  <div class="view" id="view-stats">
+    <div class="view-header">
+      <div class="view-title">📊 Statistiques</div>
+      <div class="view-sub" id="statsSubtitle">—</div>
+    </div>
+    <div id="statsContent"></div>
+  </div>
+
+  <!-- ── PARTY VIEW ── -->
+  <div class="view" id="view-party">
+    <div class="view-header">
+      <div class="view-title">🎉 Mode Fête</div>
+      <div class="view-sub" id="partyStatusSub">Synchronisez votre musique en temps réel</div>
+    </div>
+    <div id="partyContent"></div>
   </div>
 
   <!-- ── ONLINE VIEW ── -->
@@ -793,6 +924,7 @@ body {
       <span class="vol-ico" id="volIco">🔊</span>
       <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="80" oninput="setVol(this.value)">
     </div>
+    <button class="p-btn" id="btnParty" onclick="showView('party')" title="Mode Fête" style="font-size:19px;margin-left:4px;">🎉</button>
   </div>
 </div>
 
@@ -804,14 +936,14 @@ body {
   <button class="mn-btn active" data-view="songs" onclick="showView('songs')">
     <span class="mn-ico">🎵</span>Chansons
   </button>
-  <button class="mn-btn" data-view="albums" onclick="showView('albums')">
-    <span class="mn-ico">💿</span>Albums
+  <button class="mn-btn" data-view="favorites" onclick="showView('favorites')">
+    <span class="mn-ico">❤️</span>Favoris
   </button>
-  <button class="mn-btn" data-view="artists" onclick="showView('artists')">
-    <span class="mn-ico">🎤</span>Artistes
+  <button class="mn-btn" data-view="stats" onclick="showView('stats')">
+    <span class="mn-ico">📊</span>Stats
   </button>
-  <button class="mn-btn" data-view="editor" onclick="showView('editor')">
-    <span class="mn-ico">✏️</span>Éditeur
+  <button class="mn-btn" data-view="party" onclick="showView('party')">
+    <span class="mn-ico">🎉</span>Fête
   </button>
   <button class="mn-btn" data-view="online" onclick="showView('online')">
     <span class="mn-ico">🌐</span>En ligne
@@ -827,7 +959,11 @@ const ARCHIVE_ID   = 'blind-test-huhu';
 const ABLY_KEY     = 'lPL6kQ.ErKKBw:wWefHnBgmBJGVwiIRycvlQCQSjvKGosGDQ2gfIIZW8k';
 const META_STORE   = 'arya_meta_v1';
 const PSEUDO_STORE = 'arya_pseudo';
+const FAV_STORE    = 'arya_favs_v1';
+const HIST_STORE   = 'arya_history_v1';
+const STATS_STORE  = 'arya_stats_v1';
 const ABLY_CH      = 'arya-presence-v1';
+const MAX_HIST     = 150;
 
 /* ═══════════════════════════════════════════
    STATE
@@ -841,7 +977,7 @@ let repeat       = 0; // 0=off 1=all 2=one
 let queue        = [];
 let queueIdx     = -1;
 let sortField    = 'title';
-let sortDir      = 1; // 1=asc -1=desc
+let sortDir      = 1;
 let prevView     = 'songs';
 let detailTracks = [];
 let edTrack      = null;
@@ -849,6 +985,17 @@ let pseudo       = '';
 let ablyClient   = null;
 let ablyChannel  = null;
 let onlineUsers  = {};
+
+// Party state
+let partyMode    = null; // null | 'host' | 'listener'
+let partyHost    = null;
+let partySyncInt = null;
+let _partyJoinPending = null;
+
+// Stats accumulator
+let _statAccum   = 0; // seconds accumulated since last flush
+let _statLastTS  = 0; // audio.currentTime at last tick
+let _statLastSave = 0; // Date.now() of last localStorage write
 
 const audio = new Audio();
 audio.volume = 0.8;
@@ -862,6 +1009,24 @@ function fmtTime(s){
   if(!s||isNaN(s)) return '0:00';
   const m=Math.floor(s/60), sec=String(Math.floor(s%60)).padStart(2,'0');
   return `${m}:${sec}`;
+}
+
+function fmtDuration(sec){
+  sec = Math.floor(sec);
+  if(sec < 60) return `${sec}s`;
+  if(sec < 3600) return `${Math.floor(sec/60)} min`;
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
+
+function relTime(ts){
+  const d = Date.now() - ts;
+  if(d < 60000) return "À l'instant";
+  if(d < 3600000) return `Il y a ${Math.floor(d/60000)} min`;
+  if(d < 86400000) return `Il y a ${Math.floor(d/3600000)}h`;
+  if(d < 172800000) return 'Hier';
+  return `Il y a ${Math.floor(d/86400000)} jours`;
 }
 
 const GRADS=[
@@ -895,20 +1060,437 @@ function setTrackMeta(fn,d){ const m=getMeta(); m[fn]={...m[fn],...d}; saveMeta(
 function clearTrackMeta(fn){ const m=getMeta(); delete m[fn]; saveMeta(m); }
 
 /* ═══════════════════════════════════════════
+   FAVORITES
+═══════════════════════════════════════════ */
+function getFavs(){ try{ return new Set(JSON.parse(localStorage.getItem(FAV_STORE)||'[]')); }catch{ return new Set(); } }
+function saveFavs(s){ localStorage.setItem(FAV_STORE, JSON.stringify([...s])); }
+function isFav(filename){ return getFavs().has(filename); }
+
+function toggleFavById(id, e){
+  if(e) e.stopPropagation();
+  const t = tracks.find(x => x.id === id);
+  if(!t) return;
+  const s = getFavs();
+  const adding = !s.has(t.filename);
+  if(adding) s.add(t.filename); else s.delete(t.filename);
+  saveFavs(s);
+  // Update all fav buttons for this track
+  document.querySelectorAll(`.fav-btn[data-tid="${id}"]`).forEach(btn => {
+    btn.classList.toggle('active', adding);
+    btn.title = adding ? 'Retirer des favoris' : 'Ajouter aux favoris';
+    btn.textContent = adding ? '♥' : '♡';
+  });
+  updateFavBadge();
+  renderFavorites();
+  toast(adding ? '❤️ Ajouté aux favoris' : '💔 Retiré des favoris');
+}
+
+function updateFavBadge(){
+  const count = getFavs().size;
+  const badge = document.getElementById('favBadge');
+  badge.style.display = count > 0 ? '' : 'none';
+  badge.textContent = count;
+}
+
+function renderFavorites(){
+  const favs = getFavs();
+  const favTracks = tracks.filter(t => favs.has(t.filename));
+  const count = document.getElementById('favCount');
+  const list = document.getElementById('favList');
+  count.textContent = `${favTracks.length} chanson${favTracks.length !== 1 ? 's' : ''}`;
+  if(!favTracks.length){
+    list.innerHTML = `<div style="color:var(--text2);padding:60px;text-align:center;line-height:2;">♡<br>Aucun favori pour l'instant<br><small style="color:var(--text3);">Survolez une chanson et cliquez ♡ pour l'ajouter</small></div>`;
+    return;
+  }
+  list.innerHTML = favTracks.map((t,i) => `
+    <div class="track-row${currentId===t.id?' playing':''}" data-id="${t.id}" onclick="playTrack(${t.id})">
+      <div class="tr-num">${i+1}</div>
+      <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+      <div class="tr-art" style="background:${gradFor(t.artist+t.album)}">🎵</div>
+      <div class="tr-info">
+        <div class="tr-title">${esc(t.title)}</div>
+        <div class="tr-artist-s">${esc(t.artist)}</div>
+      </div>
+      <div class="tr-artist">${esc(t.artist)}</div>
+      <div class="tr-album">${esc(t.album)}</div>
+      <div class="tr-dur">
+        <span class="dur-val">${fmtTime(t.length)}</span>
+        <div class="tr-actions">
+          <button class="ico-btn fav-btn active" data-tid="${t.id}" onclick="toggleFavById(${t.id},event)" title="Retirer des favoris">♥</button>
+          <button class="ico-btn edit" onclick="event.stopPropagation();openEditor(${t.id})" title="Éditer">✏️</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════
+   HISTORY
+═══════════════════════════════════════════ */
+function getHistory(){ try{ return JSON.parse(localStorage.getItem(HIST_STORE)||'[]'); }catch{ return []; } }
+
+function addToHistory(t){
+  const h = getHistory();
+  // Avoid duplicate of same track within 30s
+  if(h.length && h[0].filename === t.filename && (Date.now() - h[0].ts) < 30000) return;
+  h.unshift({ filename:t.filename, title:t.title, artist:t.artist, album:t.album, id:t.id, ts:Date.now() });
+  if(h.length > MAX_HIST) h.splice(MAX_HIST);
+  localStorage.setItem(HIST_STORE, JSON.stringify(h));
+}
+
+function clearHistory(){
+  localStorage.removeItem(HIST_STORE);
+  renderHistory();
+  toast('🗑 Historique effacé');
+}
+
+function renderHistory(){
+  const h = getHistory();
+  const count = document.getElementById('histCount');
+  const list = document.getElementById('histList');
+  count.textContent = `${h.length} écoute${h.length !== 1 ? 's' : ''}`;
+  if(!h.length){
+    list.innerHTML = `<div style="color:var(--text2);padding:60px;text-align:center;line-height:2;">🕐<br>Aucune écoute récente</div>`;
+    return;
+  }
+  list.innerHTML = h.map((e, i) => {
+    const t = tracks.find(x => x.filename === e.filename);
+    const id = t ? t.id : -1;
+    const hhmm = new Date(e.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    return `
+      <div class="track-row hist-track-row${currentId===id?' playing':''}" data-id="${id}" onclick="${id>=0?`playTrack(${id})`:''}">
+        <div class="tr-num" style="font-size:11px;font-family:'JetBrains Mono',monospace;">${i+1}</div>
+        <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="tr-art" style="background:${gradFor(e.artist+e.album)}">🎵</div>
+        <div class="tr-info">
+          <div class="tr-title">${esc(e.title)}</div>
+          <div class="tr-artist-s">${esc(e.artist)}</div>
+        </div>
+        <div class="tr-artist">${esc(e.artist)}</div>
+        <div class="tr-album" style="font-size:12px;color:var(--text3);">${relTime(e.ts)}</div>
+        <div class="tr-dur"><span class="dur-val" style="color:var(--text3);font-size:11px;">${hhmm}</span></div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   STATS
+═══════════════════════════════════════════ */
+function getStats(){ try{ return JSON.parse(localStorage.getItem(STATS_STORE)||'{}'); }catch{ return {}; } }
+function saveStats(s){ localStorage.setItem(STATS_STORE, JSON.stringify(s)); }
+
+function recordPlay(t){
+  const s = getStats();
+  if(!s[t.filename]) s[t.filename] = { title:t.title, artist:t.artist, plays:0, seconds:0 };
+  s[t.filename].plays++;
+  s[t.filename].title = t.title;
+  s[t.filename].artist = t.artist;
+  saveStats(s);
+}
+
+function flushStatAccum(){
+  if(_statAccum <= 0 || currentId === null) return;
+  const t = tracks.find(x => x.id === currentId);
+  if(!t) return;
+  const s = getStats();
+  if(!s[t.filename]) s[t.filename] = { title:t.title, artist:t.artist, plays:0, seconds:0 };
+  s[t.filename].seconds = (s[t.filename].seconds || 0) + _statAccum;
+  saveStats(s);
+  _statAccum = 0;
+}
+
+function renderStats(){
+  const s = getStats();
+  const entries = Object.entries(s).map(([fn, d]) => ({ ...d, filename:fn }));
+  const totalSec = entries.reduce((a,e) => a + (e.seconds||0), 0);
+  const totalPlays = entries.reduce((a,e) => a + (e.plays||0), 0);
+  const topTracks = [...entries].sort((a,b) => b.plays - a.plays).slice(0, 10);
+  const artistMap = {};
+  entries.forEach(e => {
+    if(!artistMap[e.artist]) artistMap[e.artist] = { plays:0, seconds:0 };
+    artistMap[e.artist].plays += e.plays;
+    artistMap[e.artist].seconds += e.seconds || 0;
+  });
+  const topArtists = Object.entries(artistMap).sort((a,b) => b[1].plays - a[1].plays).slice(0, 6);
+
+  document.getElementById('statsSubtitle').textContent =
+    totalPlays > 0 ? `${totalPlays} lecture${totalPlays>1?'s':''} · ${fmtDuration(totalSec)} au total` : '—';
+
+  if(!totalPlays){
+    document.getElementById('statsContent').innerHTML = `
+      <div style="color:var(--text3);text-align:center;padding:80px 0;font-size:14px;line-height:2.2;">
+        📊<br>Aucune statistique pour l'instant<br>
+        <small>Les données apparaissent au fur et à mesure de vos écoutes</small>
+      </div>`;
+    return;
+  }
+
+  const maxPlays = topTracks[0]?.plays || 1;
+
+  document.getElementById('statsContent').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">🎵</div>
+        <div class="stat-val">${totalPlays}</div>
+        <div class="stat-label">lectures totales</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏱</div>
+        <div class="stat-val">${fmtDuration(totalSec)}</div>
+        <div class="stat-label">temps d'écoute</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🎤</div>
+        <div class="stat-val">${topArtists.length}</div>
+        <div class="stat-label">artistes écoutés</div>
+      </div>
+    </div>
+
+    ${topTracks.length ? `
+    <div style="margin-bottom:28px;">
+      <div class="stats-section-label">🏆 Top morceaux</div>
+      ${topTracks.map((t,i) => `
+        <div class="top-track-row">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text3);width:20px;text-align:center;flex-shrink:0;">${i+1}</div>
+          <div class="top-bar-wrap">
+            <div class="top-bar-title">${esc(t.title)}</div>
+            <div class="top-bar-sub">${esc(t.artist)}${t.seconds?` · ${fmtDuration(t.seconds)}`:''}
+            </div>
+            <div class="top-bar-bg"><div class="top-bar-fill" style="width:${(t.plays/maxPlays*100).toFixed(0)}%"></div></div>
+          </div>
+          <div class="top-count">${t.plays}×</div>
+        </div>
+      `).join('')}
+    </div>` : ''}
+
+    ${topArtists.length ? `
+    <div>
+      <div class="stats-section-label">🎤 Top artistes</div>
+      ${topArtists.map(([name, data]) => `
+        <div class="top-artist-row">
+          <div class="top-artist-av" style="background:${gradFor(name)}">🎤</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13.5px;font-weight:600;">${esc(name)}</div>
+            <div style="font-size:11.5px;color:var(--text2);">${data.plays} lecture${data.plays>1?'s':''} · ${fmtDuration(data.seconds)}</div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:700;">${data.plays}×</div>
+        </div>
+      `).join('')}
+    </div>` : ''}
+  `;
+}
+
+/* ═══════════════════════════════════════════
+   PARTY MODE
+═══════════════════════════════════════════ */
+function startParty(){
+  if(!ablyChannel){ toast('Connexion en ligne requise', true); return; }
+  if(partyMode === 'host'){ stopParty(); return; }
+  if(partyMode === 'listener') leaveParty(true);
+  partyMode = 'host';
+  // Update presence to signal we're hosting
+  try{
+    ablyChannel.presence.update({ pseudo, track: currentId!=null?{title:tracks.find(t=>t.id===currentId)?.title,artist:tracks.find(t=>t.id===currentId)?.artist}:null, party:true });
+  }catch(e){}
+  broadcastPartySync();
+  partySyncInt = setInterval(broadcastPartySync, 4000);
+  updatePartyUI();
+  toast('🎉 Mode Fête activé ! Les autres peuvent vous rejoindre');
+}
+
+function stopParty(){
+  clearInterval(partySyncInt);
+  partySyncInt = null;
+  try{ ablyChannel.publish('party_stop', { host: pseudo }); }catch(e){}
+  try{ ablyChannel.presence.update({ pseudo, track: currentId!=null?{title:tracks.find(t=>t.id===currentId)?.title,artist:tracks.find(t=>t.id===currentId)?.artist}:null, party:false }); }catch(e){}
+  partyMode = null;
+  partyHost = null;
+  updatePartyUI();
+  toast('Mode Fête terminé');
+}
+
+function joinParty(hostPseudo){
+  if(!ablyClient){ toast('Connexion requise', true); return; }
+  if(partyMode === 'host'){ toast('Arrêtez votre propre fête d\'abord', true); return; }
+  if(partyMode === 'listener') leaveParty(true);
+  partyMode = 'listener';
+  partyHost = hostPseudo;
+  // Subscribe to sync messages
+  try{
+    ablyChannel.subscribe('party_sync', onPartySyncMsg);
+    ablyChannel.subscribe('party_stop', onPartyStopMsg);
+  }catch(e){}
+  updatePartyUI();
+  toast(`🎉 Vous avez rejoint la fête de ${hostPseudo}`);
+}
+
+function leaveParty(silent=false){
+  try{
+    ablyChannel.unsubscribe('party_sync', onPartySyncMsg);
+    ablyChannel.unsubscribe('party_stop', onPartyStopMsg);
+  }catch(e){}
+  partyMode = null;
+  partyHost = null;
+  updatePartyUI();
+  if(!silent) toast('Vous avez quitté la fête');
+}
+
+function leaveOrStopParty(){
+  if(partyMode === 'host') stopParty();
+  else if(partyMode === 'listener') leaveParty();
+}
+
+function broadcastPartySync(){
+  if(!ablyChannel || partyMode !== 'host' || currentId === null) return;
+  const t = tracks.find(x => x.id === currentId);
+  if(!t) return;
+  try{
+    ablyChannel.publish('party_sync', {
+      host: pseudo,
+      filename: t.filename,
+      position: audio.currentTime,
+      isPlaying: isPlaying,
+      title: t.title,
+      artist: t.artist,
+    });
+  }catch(e){}
+}
+
+function onPartySyncMsg(msg){
+  if(partyMode !== 'listener' || msg.data.host !== partyHost) return;
+  const data = msg.data;
+  const t = tracks.find(x => x.filename === data.filename);
+  if(!t) return;
+  if(currentId !== t.id){
+    currentId = t.id;
+    audio.src = t.url;
+    updatePlayerUI(t);
+    highlightPlaying();
+  }
+  if(Math.abs(audio.currentTime - data.position) > 2.5){
+    audio.currentTime = data.position;
+  }
+  if(data.isPlaying && audio.paused) audio.play().catch(()=>{});
+  else if(!data.isPlaying && !audio.paused) audio.pause();
+}
+
+function onPartyStopMsg(msg){
+  if(partyMode !== 'listener' || msg.data.host !== partyHost) return;
+  leaveParty(true);
+  toast(`${partyHost} a arrêté la fête`);
+}
+
+function updatePartyUI(){
+  // Party banner
+  const banner = document.getElementById('partyBanner');
+  const bannerText = document.getElementById('partyBannerText');
+  if(partyMode === 'host'){
+    banner.style.display = 'flex';
+    bannerText.textContent = `🎉 Vous êtes l'hôte — les autres sont synchronisés sur votre lecture`;
+  } else if(partyMode === 'listener'){
+    banner.style.display = 'flex';
+    bannerText.textContent = `🎉 Synchronisé avec ${partyHost}`;
+  } else {
+    banner.style.display = 'none';
+  }
+  // Party dot in sidebar
+  document.getElementById('partyDot').style.display = partyMode ? 'block' : 'none';
+  // Refresh party view if open
+  const partyView = document.getElementById('view-party');
+  if(partyView && partyView.classList.contains('active')) renderPartyView();
+}
+
+function renderPartyView(){
+  const content = document.getElementById('partyContent');
+  const statusSub = document.getElementById('partyStatusSub');
+
+  // Find hosts in online users
+  const hosts = Object.entries(onlineUsers).filter(([,u]) => u.party && u.pseudo !== pseudo);
+
+  if(partyMode === 'host'){
+    statusSub.textContent = `Vous hébergez — ${Object.keys(onlineUsers).length} personne${Object.keys(onlineUsers).length>1?'s':''} en ligne`;
+    content.innerHTML = `
+      <div class="party-hero" style="border-color:rgba(196,77,110,.4);">
+        <div class="party-hero-ico">🎉</div>
+        <div>
+          <div class="party-hero-title">Fête en cours !</div>
+          <div class="party-hero-sub">Votre lecture est diffusée en direct.<br>Les participants se synchronisent automatiquement toutes les 4 secondes.</div>
+          <button class="btn btn-rose" onclick="stopParty()">⏹ Arrêter la fête</button>
+        </div>
+      </div>
+      ${_renderPartyUsersList()}
+    `;
+  } else if(partyMode === 'listener'){
+    statusSub.textContent = `Synchronisé avec ${partyHost}`;
+    content.innerHTML = `
+      <div class="party-hero">
+        <div class="party-hero-ico">🎧</div>
+        <div>
+          <div class="party-hero-title">Vous écoutez avec ${esc(partyHost)}</div>
+          <div class="party-hero-sub">Votre lecture est synchronisée avec l'hôte.<br>Vous ne pouvez pas changer de chanson manuellement.</div>
+          <button class="btn btn-ghost" onclick="leaveParty()">Quitter la fête</button>
+        </div>
+      </div>
+      ${_renderPartyUsersList()}
+    `;
+  } else {
+    statusSub.textContent = 'Synchronisez votre musique en temps réel';
+    content.innerHTML = `
+      <div class="party-hero">
+        <div class="party-hero-ico">🎉</div>
+        <div>
+          <div class="party-hero-title">Mode Fête</div>
+          <div class="party-hero-sub">Démarrez une fête pour que d'autres participants<br>écoutent exactement la même musique que vous, en temps réel via Ably.</div>
+          <button class="btn btn-acc" onclick="startParty()" ${!ablyChannel?'disabled title="Connexion requise"':''}>🎉 Démarrer une fête</button>
+        </div>
+      </div>
+      ${hosts.length ? `
+        <div class="party-users-title">Fêtes en cours</div>
+        ${hosts.map(([,u]) => `
+          <div class="party-user-card">
+            <div class="party-user-av hosting-av">${(u.pseudo||'?')[0].toUpperCase()}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="party-user-name">${esc(u.pseudo)}</div>
+              <div class="party-user-track">${u.track?`🎵 ${esc(u.track.title)}`:'En attente…'}</div>
+            </div>
+            <button class="btn btn-acc" style="font-size:12px;padding:6px 14px;" onclick="joinParty('${esc(u.pseudo).replace(/'/g,"\\'")}')">Rejoindre</button>
+          </div>
+        `).join('')}
+      ` : `<div class="party-empty">Aucune fête en cours<br><small style="color:var(--text3);">Soyez le premier à en démarrer une !</small></div>`}
+    `;
+  }
+}
+
+function _renderPartyUsersList(){
+  const entries = Object.entries(onlineUsers);
+  if(!entries.length) return '';
+  return `
+    <div class="party-users-title" style="margin-top:16px;">Personnes en ligne (${entries.length})</div>
+    ${entries.map(([,u]) => `
+      <div class="party-user-card">
+        <div class="party-user-av${u.party?' hosting-av':''}">${(u.pseudo||'?')[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="party-user-name">${esc(u.pseudo)}${u.pseudo===pseudo?' <span style="font-size:10px;color:var(--accent);">(vous)</span>':''}${u.party?' 🎉':''}</div>
+          <div class="party-user-track">${u.track?`🎵 ${esc(u.track.title)} · ${esc(u.track.artist)}`:'<span style="color:var(--text3);">Inactif</span>'}</div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+/* ═══════════════════════════════════════════
    PARSE FILENAME → metadata
 ═══════════════════════════════════════════ */
 function parseFilename(fn){
   let name=fn.replace(/\.(mp3|flac|ogg|wav|m4a)$/i,'').replace(/_/g,' ');
   const parts=name.split(/\s*-\s*/).map(p=>p.trim());
   let title=name,artist='Inconnu',album='Sans album',year='',genre='';
-
   if(parts.length>=3){artist=parts[0];album=parts[1];title=parts.slice(2).join(' - ');}
   else if(parts.length===2){artist=parts[0];title=parts[1];}
   else{title=parts[0];}
-
   const ym=title.match(/\((\d{4})\)/);
   if(ym){year=ym[1];title=title.replace(ym[0],'').trim();}
-
   return{title,artist,album,year,genre};
 }
 
@@ -920,10 +1502,8 @@ async function fetchArchive(){
     const res=await fetch(`https://archive.org/metadata/${ARCHIVE_ID}`);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();
-
     const audioRx=/\.(mp3|flac|ogg|wav|m4a)$/i;
     const files=(data.files||[]).filter(f=>audioRx.test(f.name)&&!f.name.includes('/'));
-
     const meta=getMeta();
     tracks=files.map((f,i)=>{
       const saved=meta[f.name]||{};
@@ -941,13 +1521,11 @@ async function fetchArchive(){
         size:f.size||0,
       };
     });
-
     filtered=[...tracks];
     applySort();
     buildQueue();
     renderAll();
     updateCounts();
-
   }catch(e){
     console.error(e);
     document.getElementById('trackList').innerHTML=`<div style="color:var(--text2);padding:48px;text-align:center;">❌ Impossible de charger la bibliothèque.<br><small style="color:var(--text3);">${e.message}</small></div>`;
@@ -960,6 +1538,7 @@ function updateCounts(){
   document.getElementById('songCount').textContent=`${tracks.length} chanson${tracks.length>1?'s':''}`;
   document.getElementById('albumCount').textContent=`${albs.length} album${albs.length>1?'s':''}`;
   document.getElementById('artistCount').textContent=`${arts.length} artiste${arts.length>1?'s':''}`;
+  updateFavBadge();
 }
 
 /* ═══════════════════════════════════════════
@@ -970,6 +1549,8 @@ function renderAll(){
   renderAlbums();
   renderArtists();
   renderEdList();
+  renderFavorites();
+  renderHistory();
 }
 
 /* ─── SONGS ─── */
@@ -979,10 +1560,12 @@ function renderSongs(){
     list.innerHTML=`<div style="color:var(--text2);padding:48px;text-align:center;">Aucune chanson trouvée</div>`;
     return;
   }
+  const favs = getFavs();
   list.innerHTML=filtered.map((t,i)=>{
     const sub=sortField==='genre'?(t.genre?`${esc(t.genre)} · ${esc(t.artist)}`:esc(t.artist)):
               sortField==='year'?(t.year?`${esc(t.artist)} · ${t.year}`:esc(t.artist)):
               esc(t.artist);
+    const faved = favs.has(t.filename);
     return `
     <div class="track-row${currentId===t.id?' playing':''}" data-id="${t.id}" onclick="playTrack(${t.id})">
       <div class="tr-num">${i+1}</div>
@@ -997,6 +1580,7 @@ function renderSongs(){
       <div class="tr-dur">
         <span class="dur-val">${fmtTime(t.length)}</span>
         <div class="tr-actions">
+          <button class="ico-btn fav-btn${faved?' active':''}" data-tid="${t.id}" onclick="toggleFavById(${t.id},event)" title="${faved?'Retirer des favoris':'Ajouter aux favoris'}">${faved?'♥':'♡'}</button>
           <button class="ico-btn edit" onclick="event.stopPropagation();openEditor(${t.id})" title="Éditer">✏️</button>
         </div>
       </div>
@@ -1049,18 +1633,15 @@ function renderArtists(){
 /* ─── DETAIL ─── */
 function showDetail(type,name){
   prevView=document.querySelector('.nav-item.active')?.dataset?.view||'songs';
-
   const filtered2=type==='album'
     ? tracks.filter(t=>t.album===name)
     : tracks.filter(t=>t.artist===name);
-
   detailTracks=filtered2;
   document.getElementById('detailType').textContent=type==='album'?'Album':'Artiste';
   document.getElementById('detailName').textContent=name;
   document.getElementById('detailArt').style.background=gradFor(name);
   document.getElementById('detailArt').style.borderRadius=type==='artist'?'50%':'12px';
   document.getElementById('detailArt').textContent=type==='album'?'💿':'🎤';
-
   if(type==='album'){
     const artist=filtered2[0]?.artist||'';
     document.getElementById('detailSub').textContent=`${artist} · ${filtered2.length} titre${filtered2.length>1?'s':''}`;
@@ -1068,9 +1649,10 @@ function showDetail(type,name){
     const albs=[...new Set(filtered2.map(t=>t.album))];
     document.getElementById('detailSub').textContent=`${albs.length} album${albs.length>1?'s':''} · ${filtered2.length} titre${filtered2.length>1?'s':''}`;
   }
-
-  const col=type==='album'?'Artiste':'Album';
-  document.getElementById('detailList').innerHTML=filtered2.map((t,i)=>`
+  const favs = getFavs();
+  document.getElementById('detailList').innerHTML=filtered2.map((t,i)=>{
+    const faved = favs.has(t.filename);
+    return `
     <div class="track-row detail-track-row${currentId===t.id?' playing':''}" data-id="${t.id}" onclick="playDetailTrack(${i})">
       <div class="tr-num">${i+1}</div>
       <div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
@@ -1083,12 +1665,12 @@ function showDetail(type,name){
       <div class="tr-dur">
         <span class="dur-val">${fmtTime(t.length)}</span>
         <div class="tr-actions">
+          <button class="ico-btn fav-btn${faved?' active':''}" data-tid="${t.id}" onclick="toggleFavById(${t.id},event)" title="${faved?'Retirer':'Ajouter'}">${faved?'♥':'♡'}</button>
           <button class="ico-btn edit" onclick="event.stopPropagation();openEditor(${t.id})" title="Éditer">✏️</button>
         </div>
       </div>
     </div>
-  `).join('');
-
+  `}).join('');
   showViewRaw('detail');
 }
 
@@ -1110,10 +1692,7 @@ function renderEdList(){
   `).join('');
 }
 
-function openEditor(id){
-  selectEdTrack(id);
-  showView('editor');
-}
+function openEditor(id){ selectEdTrack(id); showView('editor'); }
 
 function selectEdTrack(id){
   edTrack=tracks.find(t=>t.id===id);
@@ -1222,6 +1801,8 @@ function shuffleArr(arr){
 }
 
 function playTrack(id){
+  // Block manual play when listening to party
+  if(partyMode === 'listener') return;
   const t=tracks.find(t=>t.id===id);
   if(!t) return;
   currentId=id;
@@ -1238,11 +1819,19 @@ function playFromQueue(){
 }
 
 function loadAndPlay(t){
+  flushStatAccum();
   audio.src=t.url;
   audio.play().catch(e=>console.warn('Autoplay:',e));
   updatePlayerUI(t);
   highlightPlaying();
   broadcastTrack(t);
+  // Record in history & stats
+  addToHistory(t);
+  recordPlay(t);
+  _statLastTS = 0;
+  // Refresh if those views are active
+  const hv = document.getElementById('view-history');
+  if(hv && hv.classList.contains('active')) renderHistory();
 }
 
 function updatePlayerUI(t){
@@ -1254,7 +1843,6 @@ function updatePlayerUI(t){
   art.classList.add('active');
   document.getElementById('btnPlay').textContent='⏸';
   document.title=`${t.title} — Arya`;
-  // Banner
   const b=document.getElementById('bannerText');
   b.textContent=`▶ ${t.title}`;
   document.getElementById('playingBanner').style.display='flex';
@@ -1268,17 +1856,20 @@ function highlightPlaying(){
 }
 
 function togglePlay(){
+  if(partyMode === 'listener') return;
   if(currentId===null){if(tracks.length)playTrack(tracks[0].id);return;}
   if(isPlaying){audio.pause();}else{audio.play();}
 }
 
 function prevTrack(){
+  if(partyMode === 'listener') return;
   if(audio.currentTime>3){audio.currentTime=0;return;}
   if(queueIdx>0){queueIdx--;playFromQueue();}
   else if(repeat===1){queueIdx=queue.length-1;playFromQueue();}
 }
 
 function nextTrack(){
+  if(partyMode === 'listener') return;
   if(queueIdx<queue.length-1){queueIdx++;playFromQueue();}
   else if(repeat===1){queueIdx=0;playFromQueue();}
 }
@@ -1304,18 +1895,37 @@ function setVol(v){
 }
 
 function seekTo(e){
+  if(partyMode === 'listener') return;
   const r=e.currentTarget.getBoundingClientRect();
   const pct=(e.clientX-r.left)/r.width;
   if(audio.duration) audio.currentTime=Math.max(0,Math.min(pct*audio.duration,audio.duration));
 }
 
+/* ─── Audio events ─── */
 audio.addEventListener('timeupdate',()=>{
   const pct=audio.duration?(audio.currentTime/audio.duration)*100:0;
   document.getElementById('pFill').style.width=pct+'%';
   document.getElementById('pElapsed').textContent=fmtTime(audio.currentTime);
   document.getElementById('pDur').textContent=fmtTime(audio.duration);
+  // Stat accumulation
+  if(isPlaying && _statLastTS > 0){
+    const delta = audio.currentTime - _statLastTS;
+    if(delta > 0 && delta < 3) _statAccum += delta;
+  }
+  _statLastTS = audio.currentTime;
+  // Flush every 15 seconds
+  if(_statAccum > 15 || (Date.now() - _statLastSave) > 15000){
+    flushStatAccum();
+    _statLastSave = Date.now();
+    // Refresh stats view if open
+    const sv = document.getElementById('view-stats');
+    if(sv && sv.classList.contains('active')) renderStats();
+  }
+  // Broadcast party sync on track play
+  if(partyMode === 'host') broadcastPartySync();
 });
 audio.addEventListener('ended',()=>{
+  flushStatAccum();
   if(repeat===2){audio.currentTime=0;audio.play();}
   else nextTrack();
 });
@@ -1326,6 +1936,7 @@ audio.addEventListener('play',()=>{
 });
 audio.addEventListener('pause',()=>{
   isPlaying=false;
+  flushStatAccum();
   document.getElementById('btnPlay').textContent='▶';
   document.getElementById('pArt').classList.remove('playing-pulse');
 });
@@ -1341,6 +1952,11 @@ function showView(name){
   if(v) v.classList.add('active');
   document.querySelectorAll(`.nav-item[data-view="${name}"]`).forEach(n=>n.classList.add('active'));
   prevView=name;
+  // Lazy render for heavy views
+  if(name === 'stats') renderStats();
+  if(name === 'history') renderHistory();
+  if(name === 'favorites') renderFavorites();
+  if(name === 'party') renderPartyView();
 }
 function showViewRaw(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -1387,20 +2003,39 @@ function initAbly(){
     ablyClient=new Ably.Realtime({key:ABLY_KEY,clientId:pseudo+'_'+Date.now()});
     ablyChannel=ablyClient.channels.get(ABLY_CH);
 
-    const myData=()=>({pseudo,track:currentId!=null?{title:tracks.find(t=>t.id===currentId)?.title,artist:tracks.find(t=>t.id===currentId)?.artist}:null});
+    const myData=()=>({
+      pseudo,
+      track: currentId!=null?{title:tracks.find(t=>t.id===currentId)?.title,artist:tracks.find(t=>t.id===currentId)?.artist}:null,
+      party: partyMode === 'host',
+    });
 
     ablyClient.connection.on('connected',()=>{
       ablyChannel.presence.enter(myData());
       document.getElementById('onlineDot').style.display='block';
     });
 
-    ablyChannel.presence.subscribe('enter',m=>{onlineUsers[m.clientId]={pseudo:m.data.pseudo,track:m.data.track};renderOnline();});
-    ablyChannel.presence.subscribe('leave',m=>{delete onlineUsers[m.clientId];renderOnline();});
-    ablyChannel.presence.subscribe('update',m=>{if(onlineUsers[m.clientId])onlineUsers[m.clientId].track=m.data.track;renderOnline();});
+    ablyChannel.presence.subscribe('enter',m=>{
+      onlineUsers[m.clientId]={pseudo:m.data.pseudo,track:m.data.track,party:m.data.party||false};
+      renderOnline();
+      if(document.getElementById('view-party').classList.contains('active')) renderPartyView();
+    });
+    ablyChannel.presence.subscribe('leave',m=>{
+      delete onlineUsers[m.clientId];
+      renderOnline();
+      if(document.getElementById('view-party').classList.contains('active')) renderPartyView();
+    });
+    ablyChannel.presence.subscribe('update',m=>{
+      if(onlineUsers[m.clientId]){
+        onlineUsers[m.clientId].track=m.data.track;
+        onlineUsers[m.clientId].party=m.data.party||false;
+      }
+      renderOnline();
+      if(document.getElementById('view-party').classList.contains('active')) renderPartyView();
+    });
 
     ablyChannel.presence.get((err,members)=>{
       if(err) return;
-      members.forEach(m=>{onlineUsers[m.clientId]={pseudo:m.data.pseudo,track:m.data.track};});
+      members.forEach(m=>{onlineUsers[m.clientId]={pseudo:m.data.pseudo,track:m.data.track,party:m.data.party||false};});
       renderOnline();
     });
 
@@ -1413,7 +2048,7 @@ function initAbly(){
 function broadcastTrack(t){
   if(!ablyChannel) return;
   try{
-    ablyChannel.presence.update({pseudo,track:{title:t.title,artist:t.artist}});
+    ablyChannel.presence.update({pseudo, track:{title:t.title,artist:t.artist}, party: partyMode === 'host'});
   }catch(e){}
 }
 
@@ -1421,19 +2056,16 @@ function renderOnline(){
   const entries=Object.entries(onlineUsers);
   const count=entries.length;
   document.getElementById('onlineCount').textContent=`${count} personne${count>1?'s':''} en ligne`;
-
-  // Show badge
   const dot=document.getElementById('onlineDot');
   dot.style.display=count>0?'block':'none';
-
   document.getElementById('onlineGrid').innerHTML=entries.map(([id,u])=>{
     const isMe=u.pseudo===pseudo;
     return `
-      <div class="o-card${isMe?' me':''}">
+      <div class="o-card${isMe?' me':''}${u.party&&!isMe?' hosting':''}">
         <div class="o-avatar">${(u.pseudo||'?')[0].toUpperCase()}</div>
-        <div class="o-name">${esc(u.pseudo||id)}${isMe?' <span style="font-size:11px;color:var(--accent);">(vous)</span>':''}</div>
+        <div class="o-name">${esc(u.pseudo||id)}${isMe?' <span style="font-size:11px;color:var(--accent);">(vous)</span>':''}${u.party?' 🎉':''}</div>
         <div class="o-now">${u.track?`🎵 ${esc(u.track.title)}<br><span style="opacity:.7;">${esc(u.track.artist)}</span>`:'<span style="color:var(--text3);">Inactif</span>'}</div>
-        <div class="o-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--green);"></div>En ligne</div>
+        <div class="o-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--green);"></div>En ligne${u.party&&!isMe?` · <span style="color:var(--rose);cursor:pointer;" onclick="joinParty('${esc(u.pseudo).replace(/'/g,"\\'")}')">Rejoindre la fête</span>`:''}</div>
       </div>
     `;
   }).join('')||(count===0?`<div style="color:var(--text3);font-size:14px;padding:40px 0;">Personne d'autre en ligne pour l'instant</div>`:'');
