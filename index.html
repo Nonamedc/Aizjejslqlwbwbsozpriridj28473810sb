@@ -2173,7 +2173,7 @@ function playFromQueue(){
   loadAndPlay(t, useCrossfade);
 }
 
-async function loadAndPlay(t, withCrossfade=false){
+function loadAndPlay(t, withCrossfade=false){
   if(!t||!t.url) return;
   crossfading=false;
   unlockAudio();
@@ -2181,22 +2181,21 @@ async function loadAndPlay(t, withCrossfade=false){
   const incoming=activeAudio===audioA?audioB:audioA;
   const outgoing=activeAudio;
 
-  // Utiliser l'URL directe d'abord (blob si déjà en cache, sinon URL archive.org).
-  // NE PAS faire await fetch() ici : iOS/Safari perd le "user gesture token" après
-  // une vraie opération réseau async, ce qui bloque play().
+  // URL directe (blob si déjà en cache, sinon URL archive.org directe).
   const cachedUrl = blobCache.has(t.filename) ? blobCache.get(t.filename) : t.url;
   incoming.src=cachedUrl;
   incoming.playbackRate=currentSpeed;
   incoming.volume=withCrossfade?0:masterVolume;
 
-  // ⚠️ DOIT être AVANT play() : les events timeupdate/play/pause vérifient
-  // "if(a !== activeAudio) return" — sans ça, toute l'UI reste figée.
+  // activeAudio AVANT play() : les events timeupdate/play/pause verifient
+  // "if(a !== activeAudio) return" - sans ca, toute l UI reste figee.
   activeAudio=incoming;
 
-  try{ await incoming.play(); }
-  catch(e){ console.warn('Lecture bloquée:',e); toast('Appuie sur Play pour lancer la musique',true); }
+  // PAS de await ici : iOS/Safari revoque le user gesture token apres
+  // n importe quel await. On utilise .catch() a la place.
+  incoming.play().catch(e=>{ console.warn('Lecture bloquee:',e); toast('Appuie sur Play pour lancer la musique',true); });
 
-  // Fetch blob en arrière-plan pour optimiser les prochaines lectures
+  // Fetch blob en arriere-plan pour optimiser les prochaines lectures
   if(!blobCache.has(t.filename)){ getAudioUrl(t).catch(()=>{}); }
 
   prefetchNext();
