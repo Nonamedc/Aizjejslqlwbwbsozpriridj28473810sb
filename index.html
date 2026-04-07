@@ -762,12 +762,16 @@ body {
 
 /* ══════════════ FULL-SCREEN PLAYER (mobile) ══════════════ */
 .fs-player{
-  display:none; position:fixed; inset:0;
+  display:none; position:fixed;
+  top:0; left:0; right:0; bottom:0;
+  width:100%; height:100%;
+  height:100dvh;
   background:var(--bg); z-index:600;
   flex-direction:column; align-items:center;
   padding:max(44px, calc(16px + env(safe-area-inset-top,0px))) 24px max(24px, calc(12px + env(safe-area-inset-bottom,0px)));
   overflow-y:auto; -webkit-overflow-scrolling:touch;
   animation:fsIn 0.28s cubic-bezier(.22,1,.36,1);
+  -webkit-transform:translate3d(0,0,0);
 }
 .fs-player.open{ display:flex; }
 @keyframes fsIn{ from{ transform:translateY(100%); opacity:0; } to{ transform:translateY(0); opacity:1; } }
@@ -1289,7 +1293,7 @@ let filtered     = [];
 let currentId    = null;
 let isPlaying    = false;
 let shuffle      = false;
-let repeat       = 0; // 0=off 1=all 2=one
+let repeat       = 1; // 0=off 1=all 2=one  — boucle activée par défaut
 let queue        = [];
 let queueIdx     = -1;
 let sortField    = 'title';
@@ -2831,6 +2835,9 @@ function loadPseudo(){
     initAbly();
   }
   document.getElementById('pseudoInput').addEventListener('keydown',e=>{if(e.key==='Enter')setPseudo();});
+  // Init repeat button UI (repeat=1 par défaut)
+  const rb=document.getElementById('btnRepeat');
+  if(rb){ rb.textContent='↺'; rb.classList.add('on'); }
 }
 
 /* ═══════════════════════════════════════════
@@ -3170,12 +3177,16 @@ function openFsPlayer(){
   syncFsPlayer();
   // Prevent body scroll on iOS
   document.body.style.overflow = 'hidden';
+  // History API : le bouton retour Android fermera le lecteur au lieu de quitter l'app
+  history.pushState({ arya: 'fsPlayer' }, '');
 }
 
 function closeFsPlayer(){
   _fsOpen = false;
   document.getElementById('fsPlayer').classList.remove('open');
   document.body.style.overflow = '';
+  // Si on ferme via le bouton ⌄, on retire l'entrée history
+  if(history.state && history.state.arya === 'fsPlayer') history.back();
 }
 
 function syncFsPlayer(){
@@ -3288,12 +3299,32 @@ function openMoreSheet(){
     const el = document.querySelector(`#more${v.charAt(0).toUpperCase()+v.slice(1)}`);
     if(el) el.classList.toggle('active', v === cur);
   });
+  // Bouton retour Android fermera le sheet
+  history.pushState({ arya: 'moreSheet' }, '');
 }
 
 function closeMoreSheet(){
+  const wasOpen = document.getElementById('moreSheet').classList.contains('open');
   document.getElementById('moreBackdrop').classList.remove('open');
   document.getElementById('moreSheet').classList.remove('open');
+  if(wasOpen && history.state && history.state.arya === 'moreSheet') history.back();
 }
+
+/* ── Bouton retour physique (Android / PWA) ── */
+window.addEventListener('popstate', function(e){
+  if(_fsOpen){
+    // Fermer le lecteur plein écran sans rappeler history.back()
+    _fsOpen = false;
+    document.getElementById('fsPlayer').classList.remove('open');
+    document.body.style.overflow = '';
+    return;
+  }
+  if(document.getElementById('moreSheet').classList.contains('open')){
+    document.getElementById('moreBackdrop').classList.remove('open');
+    document.getElementById('moreSheet').classList.remove('open');
+    return;
+  }
+});
 
 function showViewFromMore(name){
   closeMoreSheet();
