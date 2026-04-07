@@ -1270,6 +1270,11 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
 </div>
 
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<!-- ═══════════════════════════════════════════
+     SHAKA PLAYER (web ExoPlayer — Google)
+     Adaptive streaming DASH/HLS/MP3/FLAC/OGG
+═══════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.11.7/shaka-player.compiled.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════
    CONFIG
@@ -1317,8 +1322,135 @@ let _statAccum   = 0; // seconds accumulated since last flush
 let _statLastTS  = 0; // audio.currentTime at last tick
 let _statLastSave = 0; // Date.now() of last localStorage write
 
-const audio = new Audio();
-audio.volume = 0.8;
+/* ═══════════════════════════════════════════
+   SHAKA PLAYER — Web ExoPlayer Integration
+   Remplace le lecteur natif HTML5 <audio> par
+   le moteur adaptatif de Google (DASH / HLS /
+   MP3 / FLAC / OGG / WAV / M4A) avec buffer
+   intelligent, reprise sur erreur et retry.
+═══════════════════════════════════════════ */
+
+// Élément <audio> caché utilisé comme backend par Shaka
+const _audioEl = document.createElement('audio');
+_audioEl.style.display = 'none';
+_audioEl.preload = 'auto';
+document.body.appendChild(_audioEl);
+
+// Install polyfills (EME, fullscreen, etc.)
+shaka.polyfill.installAll();
+
+// Vérifie la compatibilité navigateur
+if (!shaka.Player.isBrowserSupported()) {
+  console.warn('[Shaka] Navigateur non supporté, fallback natif');
+}
+
+const shakaPlayer = new shaka.Player(_audioEl);
+
+// ── Configuration Shaka (style ExoPlayer) ──
+shakaPlayer.configure({
+  streaming: {
+    bufferingGoal:           30,    // secondes à précharger
+    rebufferingGoal:          2,    // seuil de re-buffering
+    bufferBehind:            30,    // historique buffer conservé
+    stallEnabled:          true,    // détection et reprise sur stall
+    stallThreshold:           1,
+    stallSkip:             0.1,
+    jumpLargeGaps:         true,
+    retryParameters: {
+      maxAttempts:            4,
+      baseDelay:           1000,
+      backoffFactor:          2,
+      fuzzFactor:           0.5,
+      timeout:            20000,
+    },
+  },
+  manifest: {
+    retryParameters: {
+      maxAttempts:            4,
+      baseDelay:           1000,
+      backoffFactor:          2,
+    },
+  },
+});
+
+// ── Gestion d'erreurs Shaka ──
+shakaPlayer.addEventListener('error', (event) => {
+  const e = event.detail;
+  console.warn('[Shaka] Erreur:', e.code, e.message, e);
+  // Retry automatique sur erreur réseau légère
+  if (e.category === shaka.util.Error.Category.NETWORK) {
+    toast('⚠️ Interruption réseau – reprise en cours…', true);
+  } else {
+    toast('⚠️ Erreur de lecture (' + e.code + ')', true);
+  }
+});
+
+// ── Indicateur de buffering ──
+_audioEl.addEventListener('waiting', () => {
+  const pArt = document.getElementById('pArt');
+  if (pArt) pArt.style.opacity = '0.5';
+});
+_audioEl.addEventListener('canplay', () => {
+  const pArt = document.getElementById('pArt');
+  if (pArt) pArt.style.opacity = '1';
+});
+
+// ── Promesse de chargement en cours ──
+let _shakaPendingLoad = null;
+
+// ── Proxy audio : même API que HTMLAudioElement ──
+// Toutes les propriétés/méthodes restent compatibles,
+// mais l'affectation de `.src` passe par shakaPlayer.load()
+const audio = new Proxy(_audioEl, {
+
+  set(target, prop, value) {
+    if (prop === 'src' && value) {
+      // Décharge la piste précédente proprement
+      _shakaPendingLoad = shakaPlayer.load(value)
+        .then(() => {
+          _shakaPendingLoad = null;
+        })
+        .catch(err => {
+          // Fallback natif si Shaka ne peut pas gérer le format
+          console.warn('[Shaka] load() échoué, fallback natif:', err.message || err);
+          target.src = value;
+          _shakaPendingLoad = null;
+        });
+      return true;
+    }
+    target[prop] = value;
+    return true;
+  },
+
+  get(target, prop) {
+    // play() attend la fin du chargement Shaka avant de démarrer
+    if (prop === 'play') {
+      return function() {
+        if (_shakaPendingLoad) {
+          return _shakaPendingLoad.then(() => {
+            _shakaPendingLoad = null;
+            return target.play();
+          }).catch(e => { console.warn('[Shaka play]', e); });
+        }
+        return target.play().catch(e => { console.warn('[audio play]', e); });
+      };
+    }
+    // Toutes les autres propriétés (pause, currentTime, duration,
+    // paused, volume, addEventListener…) passent en natif
+    const val = target[prop];
+    return typeof val === 'function' ? val.bind(target) : val;
+  }
+});
+
+// Volume initial
+_audioEl.volume = 0.8;
+
+// Toast de confirmation au démarrage
+window.addEventListener('load', () => {
+  if (shaka.Player.isBrowserSupported()) {
+    console.info('[Arya] 🎬 Shaka Player ' + shaka.Player.version + ' activé (ExoPlayer web)');
+  }
+});
 
 /* ═══════════════════════════════════════════
    UTILS
@@ -2480,8 +2612,10 @@ function playFromQueue(){
 
 function loadAndPlay(t){
   flushStatAccum();
-  audio.src=t.url;
-  audio.play().catch(e=>console.warn('Autoplay:',e));
+  // Shaka Player : src déclenche shakaPlayer.load() de façon asynchrone.
+  // audio.play() dans le proxy attend automatiquement la fin du chargement.
+  audio.src = t.url;
+  audio.play(); // le proxy attend _shakaPendingLoad avant de démarrer
   updatePlayerUI(t);
   highlightPlaying();
   broadcastTrack(t);
@@ -2591,8 +2725,6 @@ audio.addEventListener('timeupdate',()=>{
 });
 audio.addEventListener('ended',()=>{
   flushStatAccum();
-  // Empêche l'OS de retirer la notification MediaSession quand la piste se termine
-  if('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   if(repeat===2){audio.currentTime=0;audio.play();}
   else nextTrack();
 });
@@ -2635,13 +2767,9 @@ window.updatePlayerUI = function(t){
 };
 
 /* ─── Fallback polling : détecte la fin de piste si ended n'est pas déclenché ─── */
-let _fallbackEndedFired = false;
-audio.addEventListener('play', () => { _fallbackEndedFired = false; });
-audio.addEventListener('ended', () => { _fallbackEndedFired = false; });
 setInterval(()=>{
   if(!audio.src || audio.paused || !audio.duration) return;
-  if(!_fallbackEndedFired && audio.currentTime > 0 && audio.currentTime >= audio.duration - 0.8){
-    _fallbackEndedFired = true;
+  if(audio.currentTime > 0 && audio.currentTime >= audio.duration - 0.8){
     // La piste est terminée mais ended n'a pas été reçu
     audio.dispatchEvent(new Event('ended'));
   }
