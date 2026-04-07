@@ -1,9 +1,9 @@
-```json
 {
   "name": "Arya — Lecteur Musical",
   "short_name": "Arya",
   "description": "Lecteur musical élégant avec bibliothèque, stats et mode fête",
-  "start_url": "./index.html",
+  "start_url": "/Aizjejslqlwbwbsozpriridj28473810sb/index.html",
+  "scope": "/Aizjejslqlwbwbsozpriridj28473810sb/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0c0810",
@@ -46,17 +46,16 @@
     {
       "name": "Toutes les chansons",
       "short_name": "Chansons",
-      "url": "./index.html#songs",
+      "url": "/Aizjejslqlwbwbsozpriridj28473810sb/index.html#songs",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Artistes",
       "short_name": "Artistes",
-      "url": "./index.html#artists",
+      "url": "/Aizjejslqlwbwbsozpriridj28473810sb/index.html#artists",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [],
   "prefer_related_applications": false
 }
-```
