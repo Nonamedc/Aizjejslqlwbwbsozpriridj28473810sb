@@ -1389,7 +1389,7 @@ let filtered     = [];
 let currentId    = null;
 let isPlaying    = false;
 let shuffle      = false;
-let repeat       = 1; // 0=off 1=all 2=one  — boucle activée par défaut
+let repeat       = 0; // 0=off 1=all 2=one  — boucle activée par défaut
 let queue        = [];
 let queueIdx     = -1;
 let sortField    = 'title';
@@ -1422,129 +1422,142 @@ let _statLastSave = 0; // Date.now() of last localStorage write
 ═══════════════════════════════════════════ */
 
 // Élément <audio> caché utilisé comme backend par Shaka
-const _audioEl = document.createElement('audio');
-_audioEl.style.display = 'none';
-_audioEl.preload = 'auto';
-document.body.appendChild(_audioEl);
+/* ═══════════════════════════════════════════
+   MOTEURS AUDIO (DOUBLE BUFFERING) - ARYA v5
+═══════════════════════════════════════════ */
 
-// Install polyfills (EME, fullscreen, etc.)
+// 1. Création des deux éléments audio physiques
+const _audio1 = document.createElement('audio');
+const _audio2 = document.createElement('audio');
+let activePlayer = 1; // Pivot : 1 ou 2
+
+[_audio1, _audio2].forEach((el, i) => {
+  el.style.display = 'none';
+  el.preload = 'auto';
+  el.volume = 0.8;
+  document.body.appendChild(el);
+  
+  // Indicateur de buffering lié au lecteur actif
+  el.addEventListener('waiting', () => {
+    if (activePlayer === (i + 1)) {
+      const pArt = document.getElementById('pArt');
+      if (pArt) pArt.style.opacity = '0.5';
+    }
+  });
+  el.addEventListener('canplay', () => {
+    if (activePlayer === (i + 1)) {
+      const pArt = document.getElementById('pArt');
+      if (pArt) pArt.style.opacity = '1';
+    }
+  });
+});
+
+// Install polyfills
 shaka.polyfill.installAll();
 
-// Vérifie la compatibilité navigateur
-if (!shaka.Player.isBrowserSupported()) {
-  console.warn('[Shaka] Navigateur non supporté, fallback natif');
-}
+// 2. Instanciation des deux Shaka Players
+const shaka1 = new shaka.Player();
+const shaka2 = new shaka.Player();
 
-// v5 : instanciation sans mediaElement, puis attach() asynchrone
-const shakaPlayer = new shaka.Player();
-
-(async () => {
-  await shakaPlayer.attach(_audioEl);
-
-  // ══ Configuration Shaka (style ExoPlayer) ══
-  shakaPlayer.configure({
+const setupShaka = async (p, el) => {
+  await p.attach(el);
+  p.configure({
     streaming: {
-      bufferingGoal:           30,    // secondes à précharger
-      rebufferingGoal:          2,    // seuil de re-buffering
-      bufferBehind:            30,    // historique buffer conservé
-      stallEnabled:          true,    // détection et reprise sur stall
-      stallThreshold:           1,
-      stallSkip:             0.1,
-      // jumpLargeGaps supprimé en v5 (toujours actif par défaut)
-      retryParameters: {
-        maxAttempts:            4,
-        baseDelay:           1000,
-        backoffFactor:          2,
-        fuzzFactor:           0.5,
-        timeout:            20000,
-      },
+      bufferingGoal: 30,
+      rebufferingGoal: 2,
+      bufferBehind: 30,
+      stallEnabled: true,
+      stallThreshold: 1,
+      stallSkip: 0.1,
+      retryParameters: { maxAttempts: 4, baseDelay: 1000, backoffFactor: 2, fuzzFactor: 0.5, timeout: 20000 },
     },
-    manifest: {
-      retryParameters: {
-        maxAttempts:            4,
-        baseDelay:           1000,
-        backoffFactor:          2,
-      },
-    },
+    manifest: { retryParameters: { maxAttempts: 4, baseDelay: 1000, backoffFactor: 2 } }
   });
+
+  p.addEventListener('error', (event) => {
+    const e = event.detail;
+    console.warn('[Shaka] Erreur:', e.code, e.message);
+    if (e.category === shaka.util.Error.Category.NETWORK) {
+      toast('⚠️ Interruption réseau...', true);
+    } else {
+      toast('⚠️ Erreur (' + e.code + ')', true);
+    }
+  });
+};
+
+// Initialisation asynchrone des deux moteurs
+(async () => {
+  await Promise.all([setupShaka(shaka1, _audio1), setupShaka(shaka2, _audio2)]);
 })();
 
-// ══ Gestion d'erreurs Shaka ══
-shakaPlayer.addEventListener('error', (event) => {
-  const e = event.detail;
-  console.warn('[Shaka] Erreur:', e.code, e.message, e);
-  // Retry automatique sur erreur réseau légère
-  if (e.category === shaka.util.Error.Category.NETWORK) {
-    toast('⚠️ Interruption réseau – reprise en cours…', true);
-  } else {
-    toast('⚠️ Erreur de lecture (' + e.code + ')', true);
-  }
-});
-
-// ── Indicateur de buffering ──
-_audioEl.addEventListener('waiting', () => {
-  const pArt = document.getElementById('pArt');
-  if (pArt) pArt.style.opacity = '0.5';
-});
-_audioEl.addEventListener('canplay', () => {
-  const pArt = document.getElementById('pArt');
-  if (pArt) pArt.style.opacity = '1';
-});
-
-// ── Promesse de chargement en cours ──
 let _shakaPendingLoad = null;
 
-// ── Proxy audio : même API que HTMLAudioElement ──
-// Toutes les propriétés/méthodes restent compatibles,
-// mais l'affectation de `.src` passe par shakaPlayer.load()
-const audio = new Proxy(_audioEl, {
+/* ═══════════════════════════════════════════
+   PROXY AUDIO (L'AIGUILLEUR DYNAMIQUE)
+═══════════════════════════════════════════ */
+
+const audio = new Proxy({}, {
+  get(target, prop) {
+    const el = activePlayer === 1 ? _audio1 : _audio2;
+    const sh = activePlayer === 1 ? shaka1 : shaka2;
+
+    // Intercepte play() pour attendre le chargement
+    if (prop === 'play') {
+      return async function() {
+        if (_shakaPendingLoad) {
+          try { await _shakaPendingLoad; } catch(e) {}
+          _shakaPendingLoad = null;
+        }
+        return el.play().catch(e => console.warn('[audio play]', e));
+      };
+    }
+
+    // Accès spécial pour charger sur le lecteur INACTIF (Preload)
+    if (prop === 'inactiveShaka') return activePlayer === 1 ? shaka2 : shaka1;
+    if (prop === 'activeShaka') return sh;
+
+    const val = el[prop];
+    return typeof val === 'function' ? val.bind(el) : val;
+  },
 
   set(target, prop, value) {
+    const el = activePlayer === 1 ? _audio1 : _audio2;
+    const sh = activePlayer === 1 ? shaka1 : shaka2;
+
     if (prop === 'src' && value) {
-      // Décharge la piste précédente proprement
-      _shakaPendingLoad = shakaPlayer.load(value)
-        .then(() => {
-          _shakaPendingLoad = null;
-        })
+      _shakaPendingLoad = sh.load(value)
+        .then(() => { _shakaPendingLoad = null; })
         .catch(err => {
-          // Fallback natif si Shaka ne peut pas gérer le format
-          console.warn('[Shaka] load() échoué, fallback natif:', err.message || err);
-          target.src = value;
+          console.warn('[Shaka] Fallback natif:', err);
+          el.src = value;
           _shakaPendingLoad = null;
         });
       return true;
     }
-    target[prop] = value;
+    el[prop] = value;
     return true;
-  },
-
-  get(target, prop) {
-    // play() attend la fin du chargement Shaka avant de démarrer
-    if (prop === 'play') {
-      return function() {
-        if (_shakaPendingLoad) {
-          return _shakaPendingLoad.then(() => {
-            _shakaPendingLoad = null;
-            return target.play();
-          }).catch(e => { console.warn('[Shaka play]', e); });
-        }
-        return target.play().catch(e => { console.warn('[audio play]', e); });
-      };
-    }
-    // Toutes les autres propriétés (pause, currentTime, duration,
-    // paused, volume, addEventListener…) passent en natif
-    const val = target[prop];
-    return typeof val === 'function' ? val.bind(target) : val;
   }
 });
 
-// Volume initial
-_audioEl.volume = 0.8;
+/* ═══════════════════════════════════════════
+   FONCTION DE SWAP (À utiliser pour le Gapless)
+═══════════════════════════════════════════ */
+function swapAudioBridge() {
+  const oldPlayer = activePlayer === 1 ? _audio1 : _audio2;
+  oldPlayer.pause();
+  
+  // On change de cible
+  activePlayer = activePlayer === 1 ? 2 : 1;
+  
+  // Le Proxy pointera maintenant sur le nouveau lecteur qui a déjà préchargé
+  audio.play();
+  console.log("Arya Engine: Switched to Player", activePlayer);
+}
 
-// Toast de confirmation au démarrage
+// Toast de confirmation
 window.addEventListener('load', () => {
   if (shaka.Player.isBrowserSupported()) {
-    console.info('[Arya] 🎬 Shaka Player ' + shaka.Player.version + ' activé (ExoPlayer web)');
+    console.info('[Arya] 🎬 Mode Double Engine Shaka ' + shaka.Player.version + ' activé');
   }
 });
 
@@ -2711,9 +2724,11 @@ async function loadAndPlay(t){
   flushStatAccum();
 
   try {
-    // Chargement propre avec Shaka
+    const currentShaka = activePlayer === 1 ? shaka1 : shaka2;
+    
+    // Chargement propre
     if (_shakaPendingLoad) await _shakaPendingLoad;
-    await shakaPlayer.load(t.url);
+    await currentShaka.load(t.url);
     
     currentId = t.id;
     updatePlayerUI(t);
@@ -2722,7 +2737,7 @@ async function loadAndPlay(t){
     addToHistory(t);
     recordPlay(t);
     
-    await audio.play();                 // Lecture après chargement
+    await audio.play();   // Lecture après chargement
     
     _statLastTS = audio.currentTime;
     
@@ -2732,7 +2747,6 @@ async function loadAndPlay(t){
     setTimeout(nextTrack, 1000);
   }
 }
-
 function updatePlayerUI(t){
   document.getElementById('pTitle').textContent=t.title;
   document.getElementById('pArtist').textContent=t.artist+(t.album&&t.album!=='Sans album'?' · '+t.album:'');
@@ -2786,7 +2800,7 @@ function toggleShuffle(){
   btn.classList.toggle('on', shuffle);
   if (fsBtn) fsBtn.classList.toggle('on', shuffle);
 
-  buildQueue();           // Reconstruit la file avec ou sans mélange
+  buildQueue();           
   toast(shuffle ? '🔀 Aléatoire activé' : '🔀 Aléatoire désactivé');
 }
 
@@ -2800,34 +2814,23 @@ function toggleRepeat(){
   if (repeat === 0) {
     btn.textContent = '↺';
     btn.classList.remove('on', 'rose');
-    if (fsBtn) {
-      fsBtn.textContent = '↺';
-      fsBtn.classList.remove('on', 'rose');
-    }
+    if (fsBtn) { fsBtn.textContent = '↺'; fsBtn.classList.remove('on', 'rose'); }
     toast('🔁 Répétition désactivée');
   } 
   else if (repeat === 1) {
     btn.textContent = '↺';
     btn.classList.add('on');
     btn.classList.remove('rose');
-    if (fsBtn) {
-      fsBtn.textContent = '↺';
-      fsBtn.classList.add('on');
-      fsBtn.classList.remove('rose');
-    }
+    if (fsBtn) { fsBtn.textContent = '↺'; fsBtn.classList.add('on'); fsBtn.classList.remove('rose'); }
     toast('🔁 Répéter toute la liste');
   } 
   else { // repeat === 2
     btn.textContent = '⟳';
     btn.classList.add('on', 'rose');
-    if (fsBtn) {
-      fsBtn.textContent = '⟳';
-      fsBtn.classList.add('on', 'rose');
-    }
+    if (fsBtn) { fsBtn.textContent = '⟳'; fsBtn.classList.add('on', 'rose'); }
     toast('🔂 Répéter cette chanson');
   }
 }
-
 function setVol(v){
   audio.volume=v/100;
   const ico=document.getElementById('volIco');
@@ -2875,16 +2878,14 @@ audio.addEventListener('ended', () => {
     audio.play().catch(() => {});
   } 
   else if (queueIdx < queue.length - 1) {
-    // Piste suivante
     queueIdx++;
     playFromQueue();
   } 
   else if (repeat === 1) {
-    // Recommencer la liste
     queueIdx = 0;
     playFromQueue();
   }
-  // Si repeat === 0 → on s'arrête
+  // repeat === 0 → on s'arrête
 });
 audio.addEventListener('play',()=>{
   isPlaying=true;
