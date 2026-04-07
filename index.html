@@ -2606,6 +2606,63 @@ audio.addEventListener('pause',()=>{
   document.getElementById('pArt').classList.remove('playing-pulse');
 });
 
+/* ─── Media Session API : permet la lecture en arrière-plan Android ─── */
+function _setupMediaSession(){
+  if(!('mediaSession' in navigator)) return;
+  navigator.mediaSession.setActionHandler('play', ()=>{ audio.play(); });
+  navigator.mediaSession.setActionHandler('pause', ()=>{ audio.pause(); });
+  navigator.mediaSession.setActionHandler('nexttrack', ()=>{ nextTrack(); });
+  navigator.mediaSession.setActionHandler('previoustrack', ()=>{ prevTrack(); });
+  navigator.mediaSession.setActionHandler('stop', ()=>{ audio.pause(); audio.currentTime=0; });
+}
+_setupMediaSession();
+
+/* Met à jour les métadonnées Media Session quand une piste change */
+const _origUpdatePlayerUI2 = updatePlayerUI;
+window.updatePlayerUI = function(t){
+  _origUpdatePlayerUI2(t);
+  if(!('mediaSession' in navigator)) return;
+  const cover = t?.filename ? getCover(t.filename) : null;
+  const artwork = cover ? [{ src: cover, sizes: '512x512' }] : [];
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: t.title || '',
+    artist: t.artist || '',
+    album: t.album || '',
+    artwork,
+  });
+};
+
+/* ─── Fallback polling : détecte la fin de piste si ended n'est pas déclenché ─── */
+setInterval(()=>{
+  if(!audio.src || audio.paused || !audio.duration) return;
+  if(audio.currentTime > 0 && audio.currentTime >= audio.duration - 0.8){
+    // La piste est terminée mais ended n'a pas été reçu
+    audio.dispatchEvent(new Event('ended'));
+  }
+}, 1000);
+
+/* ─── visibilitychange : resync état play/pause quand on revient sur l'app ─── */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState !== 'visible') return;
+  // Resynchroniser isPlaying avec l'état réel de l'audio
+  const actuallyPlaying = !audio.paused && !audio.ended && audio.currentTime > 0;
+  if(isPlaying !== actuallyPlaying){
+    isPlaying = actuallyPlaying;
+    const playBtn = document.getElementById('btnPlay');
+    const fsPlayBtn = document.getElementById('fsBtnPlay');
+    const artEl = document.getElementById('pArt');
+    if(isPlaying){
+      if(playBtn) playBtn.textContent = '⏸';
+      if(fsPlayBtn) fsPlayBtn.textContent = '⏸';
+      if(artEl) artEl.classList.add('playing-pulse');
+    } else {
+      if(playBtn) playBtn.textContent = '▶';
+      if(fsPlayBtn) fsPlayBtn.textContent = '▶';
+      if(artEl) artEl.classList.remove('playing-pulse');
+    }
+  }
+});
+
 /* ═══════════════════════════════════════════
    DASHBOARD
 ═══════════════════════════════════════════ */
