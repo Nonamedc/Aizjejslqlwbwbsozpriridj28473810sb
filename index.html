@@ -1562,6 +1562,109 @@ window.addEventListener('load', () => {
 });
 
 /* ═══════════════════════════════════════════
+   GAPLESS / CROSSFADE ENGINE — Arya v5
+   ─────────────────────────────────────────
+   Player 1 joue → à t-10s : bascule sur P2
+   P2 démarre en fondu → P1 précharge N+2
+   P2 à t-8s → bascule sur P1, P2 précharge N+3
+═══════════════════════════════════════════ */
+
+const XFADE_TRIGGER  = 10;   // secondes restantes pour déclencher le swap
+const XFADE_DURATION = 1400; // ms du fondu croisé
+
+let _preloadedIdx  = -1;    // queueIdx de la piste pré-chargée sur l'inactif
+let _swapTriggered = false;  // empêche le double déclenchement
+let _xfading       = false;  // fondu en cours
+
+/** Retourne le prochain queueIdx (-1 si aucun) */
+function _nextQueueIdx() {
+  if (!queue.length) return -1;
+  const ni = queueIdx + 1;
+  if (ni < queue.length) return ni;
+  if (repeat === 1) return 0;
+  return -1;
+}
+
+/** Pré-charge la piste suivante sur le lecteur inactif */
+async function preloadNextTrack() {
+  const ni = _nextQueueIdx();
+  if (ni < 0) { _preloadedIdx = -1; return; }
+  const t = queue[ni];
+  if (!t) { _preloadedIdx = -1; return; }
+
+  const inactiveShaka = activePlayer === 1 ? shaka2 : shaka1;
+  const inactiveAudio = activePlayer === 1 ? _audio2 : _audio1;
+
+  try {
+    inactiveAudio.volume = 0;
+    await inactiveShaka.load(t.url);
+    inactiveAudio.currentTime = 0;
+    _preloadedIdx = ni;
+    console.log('[Arya Dual] ✅ Pré-chargé :', t.title, '→ Player', activePlayer === 1 ? 2 : 1);
+  } catch(e) {
+    console.warn('[Arya Dual] ⚠️ Pré-chargement échoué :', e);
+    _preloadedIdx = -1;
+  }
+}
+
+/** Fondu croisé : bascule de l'actif vers l'inactif pré-chargé */
+async function triggerCrossfade() {
+  if (_xfading || _preloadedIdx < 0) return;
+  const nextTrackData = queue[_preloadedIdx];
+  if (!nextTrackData) return;
+
+  _xfading = true;
+
+  const oldAudio  = activePlayer === 1 ? _audio1 : _audio2;
+  const newAudio  = activePlayer === 1 ? _audio2 : _audio1;
+  const targetVol = oldAudio.volume > 0 ? oldAudio.volume : 0.8;
+  const newQIdx   = _preloadedIdx;
+
+  // Démarre le nouveau lecteur (déjà chargé)
+  newAudio.currentTime = 0;
+  newAudio.volume = 0;
+  try { await newAudio.play(); } catch(e) { console.warn('[Arya Dual] play new:', e); }
+
+  // Fondu croisé progressif
+  const steps  = 28;
+  const stepMs = XFADE_DURATION / steps;
+  for (let i = 1; i <= steps; i++) {
+    await new Promise(r => setTimeout(r, stepMs));
+    const p = i / steps;
+    oldAudio.volume = targetVol * (1 - p);
+    newAudio.volume = targetVol * p;
+  }
+
+  // Stop ancien lecteur et remet son volume pour la prochaine fois
+  oldAudio.pause();
+  oldAudio.volume = targetVol;
+
+  // Bascule l'état global
+  activePlayer   = activePlayer === 1 ? 2 : 1;
+  queueIdx       = newQIdx;
+  currentId      = nextTrackData.id;
+  _preloadedIdx  = -1;
+  _xfading       = false;
+  _swapTriggered = false;
+
+  // Mise à jour UI
+  updatePlayerUI(nextTrackData);
+  highlightPlaying();
+  broadcastTrack(nextTrackData);
+  addToHistory(nextTrackData);
+  recordPlay(nextTrackData);
+  isPlaying = true;
+  document.getElementById('btnPlay').textContent = '⏸';
+  document.getElementById('pArt')?.classList.add('playing-pulse');
+  _statLastTS = newAudio.currentTime;
+
+  console.log('[Arya Dual] 🔄 Swap → Player', activePlayer, '|', nextTrackData.title);
+
+  // Pré-charge le suivant sur l'ancien lecteur (maintenant inactif)
+  await preloadNextTrack();
+}
+
+/* ═══════════════════════════════════════════
    UTILS
 ═══════════════════════════════════════════ */
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -2720,31 +2823,43 @@ function playFromQueue(){
 
 async function loadAndPlay(t){
   if (!t) return;
-  
+
   flushStatAccum();
+
+  // Stoppe proprement les deux lecteurs (évite l'audio fantôme si crossfade en cours)
+  try { _audio1.pause(); } catch(e) {}
+  try { _audio2.pause(); } catch(e) {}
+
+  // Reset gapless state
+  _swapTriggered = false;
+  _xfading       = false;
+  _preloadedIdx  = -1;
 
   try {
     const currentShaka = activePlayer === 1 ? shaka1 : shaka2;
-    
-    // Chargement propre
+
     if (_shakaPendingLoad) await _shakaPendingLoad;
+
     await currentShaka.load(t.url);
-    
+
     currentId = t.id;
     updatePlayerUI(t);
     highlightPlaying();
     broadcastTrack(t);
     addToHistory(t);
     recordPlay(t);
-    
-    await audio.play();   // Lecture après chargement
-    
+
+    await audio.play();
+
     _statLastTS = audio.currentTime;
-    
+
+    // Pré-chargement immédiat de la piste suivante
+    setTimeout(preloadNextTrack, 400);
+
   } catch (err) {
     console.error("Erreur lecture :", err);
     toast("Impossible de lire cette piste", true);
-    setTimeout(nextTrack, 1000);
+    setTimeout(nextTrack, 800);
   }
 }
 function updatePlayerUI(t){
@@ -2774,12 +2889,14 @@ function highlightPlaying(){
 function togglePlay(){
   if(partyMode === 'listener') return;
   if(currentId===null){if(tracks.length)playTrack(tracks[0].id);return;}
-  if(isPlaying){audio.pause();}else{audio.play();}
+  const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
+  if(isPlaying){ activeAudio.pause(); } else { activeAudio.play(); }
 }
 
 function prevTrack(){
   if(partyMode === 'listener') return;
-  if(audio.currentTime>3){audio.currentTime=0;return;}
+  const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
+  if(activeAudio.currentTime>3){activeAudio.currentTime=0;return;}
   if(queueIdx>0){queueIdx--;playFromQueue();}
   else if(repeat===1){queueIdx=queue.length-1;playFromQueue();}
 }
@@ -2832,7 +2949,11 @@ function toggleRepeat(){
   }
 }
 function setVol(v){
-  audio.volume=v/100;
+  // Si un fondu est en cours, ne pas écraser les volumes individuels
+  if (!_xfading) {
+    _audio1.volume = v / 100;
+    _audio2.volume = v / 100;
+  }
   const ico=document.getElementById('volIco');
   ico.textContent=v==0?'🔇':v<50?'🔉':'🔊';
   if(v==0) showEyeClose();
@@ -2842,61 +2963,104 @@ function seekTo(e){
   if(partyMode === 'listener') return;
   const r=e.currentTarget.getBoundingClientRect();
   const pct=(e.clientX-r.left)/r.width;
-  if(audio.duration) audio.currentTime=Math.max(0,Math.min(pct*audio.duration,audio.duration));
+  const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
+  if(activeAudio.duration) activeAudio.currentTime=Math.max(0,Math.min(pct*activeAudio.duration,activeAudio.duration));
 }
 
-/* ─── Audio events ─── */
-audio.addEventListener('timeupdate',()=>{
-  const pct=audio.duration?(audio.currentTime/audio.duration)*100:0;
-  document.getElementById('pFill').style.width=pct+'%';
-  if(!_316active) document.getElementById('pElapsed').textContent=fmtTime(audio.currentTime);
-  document.getElementById('pDur').textContent=fmtTime(audio.duration);
-  check316(audio.currentTime);
+/* ─── Audio events — Dual-Player Aware ─── */
+/* On attache les handlers sur _audio1 ET _audio2 ;
+   chaque handler vérifie qu'il provient du lecteur actif. */
+
+function _onTimeUpdate() {
+  if (this !== (activePlayer === 1 ? _audio1 : _audio2)) return;
+
+  const cur = this.currentTime, dur = this.duration;
+  const pct = dur ? (cur / dur) * 100 : 0;
+  document.getElementById('pFill').style.width = pct + '%';
+  if (!_316active) document.getElementById('pElapsed').textContent = fmtTime(cur);
+  document.getElementById('pDur').textContent = fmtTime(dur);
+  check316(cur);
+
   // Stat accumulation
-  if(isPlaying && _statLastTS > 0){
-    const delta = audio.currentTime - _statLastTS;
-    if(delta > 0 && delta < 3) _statAccum += delta;
+  if (isPlaying && _statLastTS > 0) {
+    const delta = cur - _statLastTS;
+    if (delta > 0 && delta < 3) _statAccum += delta;
   }
-  _statLastTS = audio.currentTime;
-  // Flush every 15 seconds
-  if(_statAccum > 15 || (Date.now() - _statLastSave) > 15000){
+  _statLastTS = cur;
+  if (_statAccum > 15 || (Date.now() - _statLastSave) > 15000) {
     flushStatAccum();
     _statLastSave = Date.now();
-    // Refresh stats view if open
     const sv = document.getElementById('view-stats');
-    if(sv && sv.classList.contains('active')) renderStats();
+    if (sv && sv.classList.contains('active')) renderStats();
   }
-  // Broadcast party sync on track play
-  if(partyMode === 'host') broadcastPartySync();
-});
-audio.addEventListener('ended', () => {
+
+  if (partyMode === 'host') broadcastPartySync();
+
+  // ── Sync full-screen player ──
+  if (_fsOpen) {
+    document.getElementById('fsFill').style.width = pct + '%';
+    if (!_316active) document.getElementById('fsElapsed').textContent = fmtTime(cur);
+    document.getElementById('fsDur').textContent = fmtTime(dur);
+  }
+
+  // ── Déclenchement du fondu croisé ──
+  if (!_swapTriggered && !_xfading && dur > 0) {
+    const remaining = dur - cur;
+    // Trigger entre 5 et XFADE_TRIGGER secondes selon si piste courte
+    const triggerAt = Math.min(XFADE_TRIGGER, dur * 0.15);
+    if (remaining <= triggerAt && remaining > 0 && _preloadedIdx >= 0) {
+      _swapTriggered = true;
+      triggerCrossfade();
+    }
+  }
+}
+
+function _onEnded() {
+  if (this !== (activePlayer === 1 ? _audio1 : _audio2)) return;
   flushStatAccum();
-  
+
   if (repeat === 2) {
-    // Répéter une seule chanson
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
-  } 
-  else if (queueIdx < queue.length - 1) {
-    queueIdx++;
-    playFromQueue();
-  } 
-  else if (repeat === 1) {
-    queueIdx = 0;
-    playFromQueue();
+    this.currentTime = 0;
+    this.play().catch(() => {});
+  } else if (_preloadedIdx >= 0 && !_xfading) {
+    // Fallback : le fondu n'a pas pu se déclencher à temps
+    triggerCrossfade();
+  } else if (!_xfading) {
+    // Pas de pré-chargement dispo — lecture classique
+    if (queueIdx < queue.length - 1) { queueIdx++; playFromQueue(); }
+    else if (repeat === 1) { queueIdx = 0; playFromQueue(); }
   }
-  // repeat === 0 → on s'arrête
-});
-audio.addEventListener('play',()=>{
-  isPlaying=true;
-  document.getElementById('btnPlay').textContent='⏸';
+}
+
+function _onPlay() {
+  if (this !== (activePlayer === 1 ? _audio1 : _audio2)) return;
+  isPlaying = true;
+  document.getElementById('btnPlay').textContent = '⏸';
   document.getElementById('pArt').classList.add('playing-pulse');
-});
-audio.addEventListener('pause',()=>{
-  isPlaying=false;
+  if (_fsOpen) {
+    document.getElementById('fsBtnPlay').textContent = '⏸';
+    document.getElementById('fsArt').classList.add('playing-pulse');
+  }
+}
+
+function _onPause() {
+  if (this !== (activePlayer === 1 ? _audio1 : _audio2)) return;
+  if (_xfading) return; // pendant le fondu le pause de l'ancien n'est pas un arrêt utilisateur
+  isPlaying = false;
   flushStatAccum();
-  document.getElementById('btnPlay').textContent='▶';
+  document.getElementById('btnPlay').textContent = '▶';
   document.getElementById('pArt').classList.remove('playing-pulse');
+  if (_fsOpen) {
+    document.getElementById('fsBtnPlay').textContent = '▶';
+    document.getElementById('fsArt').classList.remove('playing-pulse');
+  }
+}
+
+[_audio1, _audio2].forEach(el => {
+  el.addEventListener('timeupdate', _onTimeUpdate);
+  el.addEventListener('ended',      _onEnded);
+  el.addEventListener('play',       _onPlay);
+  el.addEventListener('pause',      _onPause);
 });
 
 /* ─── Media Session API : permet la lecture en arrière-plan Android ─── */
@@ -2927,18 +3091,19 @@ window.updatePlayerUI = function(t){
 
 /* ─── Fallback polling : détecte la fin de piste si ended n'est pas déclenché ─── */
 setInterval(()=>{
-  if(!audio.src || audio.paused || !audio.duration) return;
-  if(audio.currentTime > 0 && audio.currentTime >= audio.duration - 0.8){
-    // La piste est terminée mais ended n'a pas été reçu
-    audio.dispatchEvent(new Event('ended'));
+  if (_xfading) return;
+  const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
+  if(!activeAudio.src || activeAudio.paused || !activeAudio.duration) return;
+  if(activeAudio.currentTime > 0 && activeAudio.currentTime >= activeAudio.duration - 0.8){
+    activeAudio.dispatchEvent(new Event('ended'));
   }
 }, 1000);
 
 /* ─── visibilitychange : resync état play/pause quand on revient sur l'app ─── */
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState !== 'visible') return;
-  // Resynchroniser isPlaying avec l'état réel de l'audio
-  const actuallyPlaying = !audio.paused && !audio.ended && audio.currentTime > 0;
+  const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
+  const actuallyPlaying = !activeAudio.paused && !activeAudio.ended && activeAudio.currentTime > 0;
   if(isPlaying !== actuallyPlaying){
     isPlaying = actuallyPlaying;
     const playBtn = document.getElementById('btnPlay');
@@ -3606,7 +3771,8 @@ function fsSeekTo(e){
   if(partyMode === 'listener') return;
   const r = e.currentTarget.getBoundingClientRect();
   const pct = (e.clientX - r.left) / r.width;
-  if(audio.duration) audio.currentTime = Math.max(0, Math.min(pct * audio.duration, audio.duration));
+  const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
+  if(activeAudio.duration) activeAudio.currentTime = Math.max(0, Math.min(pct * activeAudio.duration, activeAudio.duration));
 }
 
 function setVolFs(v){
@@ -3615,26 +3781,7 @@ function setVolFs(v){
   document.getElementById('volSlider').value = v;
 }
 
-// Patch audio events to also sync FS player
-const _origPlay = audio.addEventListener.bind(audio);
-audio.addEventListener('timeupdate', () => {
-  if(!_fsOpen) return;
-  document.getElementById('fsFill').style.width = document.getElementById('pFill').style.width;
-  if(!_316active) document.getElementById('fsElapsed').textContent = fmtTime(audio.currentTime);
-  document.getElementById('fsDur').textContent = fmtTime(audio.duration);
-}, true);
-audio.addEventListener('play', () => {
-  if(_fsOpen){
-    document.getElementById('fsBtnPlay').textContent = '⏸';
-    document.getElementById('fsArt').classList.add('playing-pulse');
-  }
-}, true);
-audio.addEventListener('pause', () => {
-  if(_fsOpen){
-    document.getElementById('fsBtnPlay').textContent = '▶';
-    document.getElementById('fsArt').classList.remove('playing-pulse');
-  }
-}, true);
+// Note: FS player sync is now handled directly in _onTimeUpdate / _onPlay / _onPause
 
 /* ══════════════════════════════════════════════
    SWIPE GESTURES (player + full-screen player)
