@@ -1203,11 +1203,11 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
   <button class="mn-btn" data-view="favorites" onclick="showView('favorites')">
     <span class="mn-ico">❤️</span>Favoris
   </button>
-  <button class="mn-btn" data-view="stats" onclick="showView('stats')">
-    <span class="mn-ico">📊</span>Stats
+  <button class="mn-btn" data-view="albums" onclick="showView('albums')">
+    <span class="mn-ico">💿</span>Albums
   </button>
-  <button class="mn-btn" data-view="party" onclick="showView('party')">
-    <span class="mn-ico">🎉</span>Fête
+  <button class="mn-btn" data-view="artists" onclick="showView('artists')">
+    <span class="mn-ico">🎤</span>Artistes
   </button>
   <button class="mn-btn" id="mnMoreBtn" onclick="openMoreSheet()">
     <span class="mn-ico">⋯</span>Plus
@@ -1220,11 +1220,11 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
   <div class="more-sheet-handle"></div>
   <div class="more-sheet-title">Navigation</div>
   <div class="more-grid">
-    <div class="more-item" id="moreAlbums" data-view="albums" onclick="showViewFromMore('albums')">
-      <span class="more-ico">💿</span>Albums
+    <div class="more-item" id="moreStats" data-view="stats" onclick="showViewFromMore('stats')">
+      <span class="more-ico">📊</span>Stats
     </div>
-    <div class="more-item" id="moreArtists" data-view="artists" onclick="showViewFromMore('artists')">
-      <span class="more-ico">🎤</span>Artistes
+    <div class="more-item" id="moreParty" data-view="party" onclick="showViewFromMore('party')">
+      <span class="more-ico">🎉</span>Mode Fête
     </div>
     <div class="more-item" id="moreHistory" data-view="history" onclick="showViewFromMore('history')">
       <span class="more-ico">🕐</span>Historique
@@ -3277,7 +3277,7 @@ audio.addEventListener('pause', () => {
 /* ══════════════════════════════════════════════
    MORE BOTTOM SHEET
 ══════════════════════════════════════════════ */
-const MORE_VIEWS = ['albums','artists','history','online','editor'];
+const MORE_VIEWS = ['stats','party','history','online','editor'];
 
 function openMoreSheet(){
   document.getElementById('moreBackdrop').classList.add('open');
@@ -3308,7 +3308,7 @@ const _origShowView = showView;
 window.showView = function(name){
   _origShowView(name);
   // If navigating to a main nav view, deactivate More button
-  const mainViews = ['dashboard','songs','favorites','stats','party'];
+  const mainViews = ['dashboard','songs','favorites','albums','artists'];
   const mnMore = document.getElementById('mnMoreBtn');
   if(mnMore){
     if(mainViews.includes(name)) mnMore.classList.remove('active');
