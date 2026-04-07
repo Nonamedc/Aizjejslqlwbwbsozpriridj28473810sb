@@ -2591,6 +2591,8 @@ audio.addEventListener('timeupdate',()=>{
 });
 audio.addEventListener('ended',()=>{
   flushStatAccum();
+  // Empêche l'OS de retirer la notification MediaSession quand la piste se termine
+  if('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   if(repeat===2){audio.currentTime=0;audio.play();}
   else nextTrack();
 });
@@ -2633,9 +2635,13 @@ window.updatePlayerUI = function(t){
 };
 
 /* ─── Fallback polling : détecte la fin de piste si ended n'est pas déclenché ─── */
+let _fallbackEndedFired = false;
+audio.addEventListener('play', () => { _fallbackEndedFired = false; });
+audio.addEventListener('ended', () => { _fallbackEndedFired = false; });
 setInterval(()=>{
   if(!audio.src || audio.paused || !audio.duration) return;
-  if(audio.currentTime > 0 && audio.currentTime >= audio.duration - 0.8){
+  if(!_fallbackEndedFired && audio.currentTime > 0 && audio.currentTime >= audio.duration - 0.8){
+    _fallbackEndedFired = true;
     // La piste est terminée mais ended n'a pas été reçu
     audio.dispatchEvent(new Event('ended'));
   }
