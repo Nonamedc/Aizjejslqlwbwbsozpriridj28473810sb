@@ -4,15 +4,15 @@
    + réseau pour les données externes (archive JSON, covers iTunes)
 ═══════════════════════════════════════════ */
 
-const CACHE_NAME = 'arya-v1';
+const CACHE_NAME = 'arya-v2';
+const BASE = '/Aizjejslqlwbwbsozpriridj28473810sb';
 const SHELL_ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon.svg',
-  './icon-192.png',
-  './icon-512.png',
-  // Google Fonts (mise en cache à la demande)
+  BASE + '/',
+  BASE + '/index.html',
+  BASE + '/manifest.json',
+  BASE + '/icon.svg',
+  BASE + '/icon-192.png',
+  BASE + '/icon-512.png',
 ];
 
 /* ── INSTALL : précharger le shell ── */
