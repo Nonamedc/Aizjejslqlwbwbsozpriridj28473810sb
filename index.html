@@ -1389,7 +1389,7 @@ let filtered     = [];
 let currentId    = null;
 let isPlaying    = false;
 let shuffle      = false;
-let repeat       = 0; // 0=off 1=all 2=one  — boucle activée par défaut
+let repeat       = 1; // 0=off 1=all 2=one  — boucle toute la liste par défaut
 let queue        = [];
 let queueIdx     = -1;
 let sortField    = 'title';
@@ -2323,22 +2323,33 @@ function broadcastPartySync(){
   }catch(e){}
 }
 
-function onPartySyncMsg(msg){
+async function onPartySyncMsg(msg){
   if(partyMode !== 'listener' || msg.data.host !== partyHost) return;
   const data = msg.data;
   const t = tracks.find(x => x.filename === data.filename);
   if(!t) return;
+  const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
+  const sh = activePlayer === 1 ? shaka1 : shaka2;
   if(currentId !== t.id){
     currentId = t.id;
-    audio.src = t.url;
+    try { await sh.load(t.url); } catch(e) { console.warn('[Party sync] load error', e); return; }
     updatePlayerUI(t);
     highlightPlaying();
   }
-  if(Math.abs(audio.currentTime - data.position) > 2.5){
-    audio.currentTime = data.position;
+  if(Math.abs(activeAudio.currentTime - data.position) > 2.5){
+    activeAudio.currentTime = data.position;
   }
-  if(data.isPlaying && audio.paused) audio.play().catch(()=>{});
-  else if(!data.isPlaying && !audio.paused) audio.pause();
+  if(data.isPlaying && activeAudio.paused){
+    activeAudio.play().catch(async () => {
+      // Stream expiré après une longue pause → rechargement + seek
+      try {
+        await sh.load(t.url);
+        activeAudio.currentTime = data.position;
+        await activeAudio.play();
+        updatePlayerUI(t);
+      } catch(e2) { console.warn('[Party sync] replay after reload error', e2); }
+    });
+  } else if(!data.isPlaying && !activeAudio.paused) activeAudio.pause();
 }
 
 function onPartyStopMsg(msg){
@@ -2790,6 +2801,7 @@ function applySort(){
 
 function onSearch(){
   const q=document.getElementById('searchInput').value.toLowerCase();
+  if(q) showViewRaw('songs');
   filtered=q
     ? tracks.filter(t=>t.title.toLowerCase().includes(q)||t.artist.toLowerCase().includes(q)||t.album.toLowerCase().includes(q))
     : [...tracks];
@@ -2896,7 +2908,24 @@ function togglePlay(){
   if(partyMode === 'listener') return;
   if(currentId===null){if(tracks.length)playTrack(tracks[0].id);return;}
   const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
-  if(isPlaying){ activeAudio.pause(); } else { activeAudio.play(); }
+  const sh = activePlayer === 1 ? shaka1 : shaka2;
+  if(isPlaying){
+    activeAudio.pause();
+  } else {
+    const savedPos = activeAudio.currentTime;
+    activeAudio.play().catch(async () => {
+      // Stream expiré après une longue pause → rechargement + seek
+      const t = tracks.find(x => x.id === currentId);
+      if(!t) return;
+      try {
+        await sh.load(t.url);
+        activeAudio.currentTime = savedPos;
+        await activeAudio.play();
+        updatePlayerUI(t);
+        if(partyMode === 'host') broadcastPartySync();
+      } catch(e) { console.warn('[Arya] replay after reload error', e); }
+    });
+  }
 }
 
 function prevTrack(){
@@ -3000,9 +3029,6 @@ function _onTimeUpdate() {
     if (sv && sv.classList.contains('active')) renderStats();
   }
 
-  if (partyMode === 'host') broadcastPartySync();
-
-  // ── Mise à jour position écran verrouillé (toutes les 4s) ──
   if ('mediaSession' in navigator && Math.floor(cur) % 4 === 0) {
     _updatePositionState();
   }
