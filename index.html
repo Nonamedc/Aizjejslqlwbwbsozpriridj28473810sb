@@ -1435,6 +1435,10 @@ let activePlayer = 1; // Pivot : 1 ou 2
   el.style.display = 'none';
   el.preload = 'auto';
   el.volume = 0.8;
+  // Nécessaire pour iOS : garde l'audio actif en arrière-plan et écran verrouillé
+  el.setAttribute('playsinline', '');
+  el.setAttribute('webkit-playsinline', '');
+  el.setAttribute('x-webkit-airplay', 'allow');
   document.body.appendChild(el);
   
   // Indicateur de buffering lié au lecteur actif
@@ -1656,7 +1660,9 @@ async function triggerCrossfade() {
   isPlaying = true;
   document.getElementById('btnPlay').textContent = '⏸';
   document.getElementById('pArt')?.classList.add('playing-pulse');
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   _statLastTS = newAudio.currentTime;
+  setTimeout(_updatePositionState, 100);
 
   console.log('[Arya Dual] 🔄 Swap → Player', activePlayer, '|', nextTrackData.title);
 
@@ -2996,6 +3002,11 @@ function _onTimeUpdate() {
 
   if (partyMode === 'host') broadcastPartySync();
 
+  // ── Mise à jour position écran verrouillé (toutes les 4s) ──
+  if ('mediaSession' in navigator && Math.floor(cur) % 4 === 0) {
+    _updatePositionState();
+  }
+
   // ── Sync full-screen player ──
   if (_fsOpen) {
     document.getElementById('fsFill').style.width = pct + '%';
@@ -3041,6 +3052,8 @@ function _onPlay() {
     document.getElementById('fsBtnPlay').textContent = '⏸';
     document.getElementById('fsArt').classList.add('playing-pulse');
   }
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+  _updatePositionState();
 }
 
 function _onPause() {
@@ -3054,6 +3067,7 @@ function _onPause() {
     document.getElementById('fsBtnPlay').textContent = '▶';
     document.getElementById('fsArt').classList.remove('playing-pulse');
   }
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
 }
 
 [_audio1, _audio2].forEach(el => {
@@ -3063,30 +3077,96 @@ function _onPause() {
   el.addEventListener('pause',      _onPause);
 });
 
-/* ─── Media Session API : permet la lecture en arrière-plan Android ─── */
+/* ═══════════════════════════════════════════
+   MEDIA SESSION — Notif barre + écran verrouillé
+   Gère : boutons play/pause/prev/next/stop/seek
+   + barre de progression temps réel
+   + artwork multi-résolution
+   + mise à jour après crossfade
+═══════════════════════════════════════════ */
+
+function _activeAudio() {
+  return activePlayer === 1 ? _audio1 : _audio2;
+}
+
 function _setupMediaSession(){
   if(!('mediaSession' in navigator)) return;
-  navigator.mediaSession.setActionHandler('play', ()=>{ audio.play(); });
-  navigator.mediaSession.setActionHandler('pause', ()=>{ audio.pause(); });
-  navigator.mediaSession.setActionHandler('nexttrack', ()=>{ nextTrack(); });
-  navigator.mediaSession.setActionHandler('previoustrack', ()=>{ prevTrack(); });
-  navigator.mediaSession.setActionHandler('stop', ()=>{ audio.pause(); audio.currentTime=0; });
+
+  navigator.mediaSession.setActionHandler('play', () => {
+    _activeAudio().play().catch(() => {});
+  });
+  navigator.mediaSession.setActionHandler('pause', () => {
+    _activeAudio().pause();
+  });
+  navigator.mediaSession.setActionHandler('stop', () => {
+    _activeAudio().pause();
+    _activeAudio().currentTime = 0;
+  });
+  navigator.mediaSession.setActionHandler('nexttrack', () => { nextTrack(); });
+  navigator.mediaSession.setActionHandler('previoustrack', () => { prevTrack(); });
+
+  // Scrubbing depuis l'écran verrouillé / la notif
+  try {
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime !== undefined) {
+        const aa = _activeAudio();
+        aa.currentTime = Math.max(0, Math.min(details.seekTime, aa.duration || 0));
+        _updatePositionState();
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      const aa = _activeAudio();
+      aa.currentTime = Math.min((details.seekOffset || 10) + aa.currentTime, aa.duration || 0);
+      _updatePositionState();
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      const aa = _activeAudio();
+      aa.currentTime = Math.max(aa.currentTime - (details.seekOffset || 10), 0);
+      _updatePositionState();
+    });
+  } catch(e) { /* navigateur ancien, on ignore */ }
 }
 _setupMediaSession();
 
-/* Met à jour les métadonnées Media Session quand une piste change */
+/** Met à jour la position sur la barre de notif / écran verrouillé */
+function _updatePositionState(){
+  if(!('mediaSession' in navigator)) return;
+  const aa = _activeAudio();
+  if(!aa.duration || isNaN(aa.duration)) return;
+  try {
+    navigator.mediaSession.setPositionState({
+      duration:     aa.duration,
+      playbackRate: aa.playbackRate || 1,
+      position:     Math.min(aa.currentTime, aa.duration),
+    });
+  } catch(e) {}
+}
+
+/** Met à jour les métadonnées (titre, artiste, pochette) dans la notif */
 const _origUpdatePlayerUI2 = updatePlayerUI;
 window.updatePlayerUI = function(t){
   _origUpdatePlayerUI2(t);
   if(!('mediaSession' in navigator)) return;
+
+  navigator.mediaSession.playbackState = 'playing';
+
   const cover = t?.filename ? getCover(t.filename) : null;
-  const artwork = cover ? [{ src: cover, sizes: '512x512' }] : [];
+  // Multi-résolution pour Android (96) + iOS (192) + desktop (512)
+  const artwork = cover ? [
+    { src: cover.replace('600x600bb', '96x96bb'),  sizes: '96x96',   type: 'image/jpeg' },
+    { src: cover.replace('600x600bb', '192x192bb'), sizes: '192x192', type: 'image/jpeg' },
+    { src: cover,                                    sizes: '512x512', type: 'image/jpeg' },
+  ] : [];
+
   navigator.mediaSession.metadata = new MediaMetadata({
-    title: t.title || '',
+    title:  t.title  || '',
     artist: t.artist || '',
-    album: t.album || '',
+    album:  t.album  || '',
     artwork,
   });
+
+  // Réinitialise la position à 0 (nouvelle piste)
+  setTimeout(_updatePositionState, 200);
 };
 
 /* ─── Fallback polling : détecte la fin de piste si ended n'est pas déclenché ─── */
