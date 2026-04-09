@@ -641,6 +641,77 @@ body {
 .dash-sc-label{font-size:12.5px;font-weight:500;}
 .dash-sc-sub{font-size:10.5px;color:var(--text2);}
 
+/* ══════════════ ITUNES SEARCH SHEET ══════════════ */
+.itunes-backdrop{
+  position:fixed;inset:0;z-index:180;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  opacity:0;pointer-events:none;transition:opacity .22s;
+}
+.itunes-backdrop.open{opacity:1;pointer-events:auto;}
+.itunes-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:181;
+  background:var(--bg2);border-top:1px solid var(--border);
+  border-radius:18px 18px 0 0;
+  max-height:88vh;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1,.23,1);
+}
+.itunes-sheet.open{transform:translateY(0);}
+.itunes-sheet-handle{
+  width:36px;height:4px;border-radius:2px;
+  background:var(--border);margin:10px auto 0;flex-shrink:0;
+}
+.itunes-sheet-header{
+  padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.itunes-sheet-title{
+  font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.itunes-sheet-close{
+  margin-left:auto;background:none;border:none;color:var(--text3);
+  cursor:pointer;font-size:16px;line-height:1;padding:0;
+}
+.itunes-search-row{display:flex;gap:8px;}
+.itunes-query-input{
+  flex:1;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px;color:var(--text);
+  font-family:'Outfit',sans-serif;font-size:13.5px;outline:none;transition:border-color .2s;
+}
+.itunes-query-input:focus{border-color:var(--accent);}
+.itunes-query-input::placeholder{color:var(--text3);}
+.itunes-results{
+  overflow-y:auto;padding:12px 14px 32px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.itunes-result-card{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;
+  transition:border-color .15s;
+}
+.itunes-result-card:hover{border-color:rgba(var(--accent-rgb),.5);}
+.itunes-result-cover{
+  width:52px;height:52px;border-radius:7px;flex-shrink:0;
+  background:var(--surface);display:flex;align-items:center;
+  justify-content:center;font-size:22px;overflow:hidden;
+}
+.itunes-result-cover img{width:100%;height:100%;object-fit:cover;border-radius:7px;display:block;}
+.itunes-result-cover.circle{border-radius:50%;}
+.itunes-result-cover.circle img{border-radius:50%;}
+.itunes-result-info{flex:1;min-width:0;}
+.itunes-result-title{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.itunes-result-artist{font-size:12px;color:var(--accent);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.itunes-result-album{font-size:11.5px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.itunes-result-meta{font-size:11px;color:var(--text3);margin-top:2px;}
+.itunes-apply-btn{
+  padding:8px 14px;border-radius:7px;font-size:12.5px;font-weight:700;
+  background:var(--accent);color:#000;border:none;cursor:pointer;
+  flex-shrink:0;font-family:'Outfit',sans-serif;transition:opacity .15s;
+}
+.itunes-apply-btn:active{opacity:.75;}
+.itunes-empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;line-height:1.6;}
+.itunes-loading{display:flex;align-items:center;justify-content:center;padding:40px;gap:12px;color:var(--text2);font-size:13px;}
+
 /* ══════════════ EASTER EGG : NEIGE ══════════════ */
 @keyframes snowfall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
 .snow-flake{position:fixed;top:-20px;pointer-events:none;z-index:9990;font-size:14px;animation:snowfall linear forwards;color:#c8e8ff;}
@@ -1309,7 +1380,8 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
                 <label class="form-label">Pochette (URL)</label>
                 <input class="form-input mono" id="ed-cover" placeholder="https://… ou laisser vide">
                 <div class="ed-cover-search" style="margin-top:8px;">
-                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="enrichTrackManual(edTrack?.id)">🔍 Auto-chercher</button>
+                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="enrichTrackManual(edTrack?.id)">⚡ Auto-chercher</button>
+                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="openItunesSearch(edTrack?.id,'','cover')">🔍 Recherche libre</button>
                   <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="searchArtistImgManual(edTrack?.id)">🎤 Photo artiste</button>
                 </div>
                 <div style="display:flex;gap:6px;margin-top:8px;">
@@ -1343,6 +1415,10 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
             <div class="form-group">
               <label class="form-label">Fichier source</label>
               <input class="form-input mono" id="ed-file" readonly>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🎵 URL Deezer <span style="font-size:10px;color:var(--text3);font-weight:400;">(remplace Archive.org pour cette piste)</span></label>
+              <input class="form-input mono" id="ed-deezer" placeholder="https://deezer.page.link/… ou lien direct .mp3">
             </div>
             <div class="form-acts">
               <button class="btn btn-acc" onclick="saveEdMeta()" style="flex:1;">💾 Sauvegarder</button>
@@ -1515,6 +1591,26 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
   </div>
 </div>
 
+<!-- ITUNES SEARCH SHEET -->
+<div class="itunes-backdrop" id="itunesBackdrop" onclick="closeItunesSearch()"></div>
+<div class="itunes-sheet" id="itunesSheet">
+  <div class="itunes-sheet-handle"></div>
+  <div class="itunes-sheet-header">
+    <div class="itunes-sheet-title">
+      <span id="itunesSheetTitle">🔍 Recherche iTunes</span>
+      <button class="itunes-sheet-close" onclick="closeItunesSearch()">✕</button>
+    </div>
+    <div class="itunes-search-row">
+      <input class="itunes-query-input" id="itunesQueryInput" placeholder="Artiste – Titre…"
+             onkeydown="if(event.key==='Enter')runItunesSearch()">
+      <button class="btn btn-acc" style="padding:9px 16px;font-size:13px;white-space:nowrap;" onclick="runItunesSearch()">🔍 Chercher</button>
+    </div>
+  </div>
+  <div class="itunes-results" id="itunesResults">
+    <div class="itunes-empty">Tape un nom d'artiste ou de titre<br>et lance la recherche ✨</div>
+  </div>
+</div>
+
 <!-- FULL-SCREEN PLAYER (mobile) -->
 <div class="fs-player" id="fsPlayer">
 
@@ -1564,6 +1660,13 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
      SHAKA PLAYER (web ExoPlayer — Google)
      Adaptive streaming DASH/HLS/MP3/FLAC/OGG
 ═══════════════════════════════════════════ -->
+<script>
+// Polyfill console.info pour environnements qui l'auraient supprimé (ex: certains WebViews Android)
+if (typeof console === 'undefined') window.console = {};
+if (typeof console.info !== 'function') console.info = console.log || function(){};
+if (typeof console.warn !== 'function') console.warn = console.log || function(){};
+if (typeof console.error !== 'function') console.error = console.log || function(){};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/shaka-player@5/dist/shaka-player.compiled.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════
@@ -1587,9 +1690,9 @@ const ARCHIVE_CREDS_STORE = 'arya_archive_creds_v1';
 let tracks       = [];
 let filtered     = [];
 let currentId    = null;
-let isPlaying    = false;
-let shuffle      = false;
-let repeat       = 1; // 0=off 1=all 2=one  — boucle toute la liste par défaut
+var isPlaying    = false;
+var shuffle      = false;
+var repeat       = 1; // 0=off 1=all 2=one  — boucle toute la liste par défaut
 let queue        = [];
 let queueIdx     = -1;
 let sortField    = 'title';
@@ -1602,8 +1705,11 @@ let ablyClient   = null;
 let ablyChannel  = null;
 let onlineUsers  = {};
 
+// Full-screen player state (déclaré en var car utilisé dans un autre bloc script)
+var _fsOpen = false;
+
 // Party state
-let partyMode    = null; // null | 'host' | 'listener'
+var partyMode    = null; // null | 'host' | 'listener'
 let partyHost    = null;
 let partySyncInt = null;
 let _partyJoinPending = null;
@@ -1700,7 +1806,7 @@ let _shakaPendingLoad = null;
    PROXY AUDIO (L'AIGUILLEUR DYNAMIQUE)
 ═══════════════════════════════════════════ */
 
-const audio = new Proxy({}, {
+var audio = new Proxy({}, {
   get(target, prop) {
     const el = activePlayer === 1 ? _audio1 : _audio2;
     const sh = activePlayer === 1 ? shaka1 : shaka2;
@@ -1761,7 +1867,7 @@ function swapAudioBridge() {
 // Toast de confirmation
 window.addEventListener('load', () => {
   if (shaka.Player.isBrowserSupported()) {
-    console.info('[Arya] 🎬 Mode Double Engine Shaka ' + shaka.Player.version + ' activé');
+    console.log('[Arya] 🎬 Mode Double Engine Shaka ' + shaka.Player.version + ' activé');
   }
 });
 
@@ -1801,7 +1907,7 @@ async function preloadNextTrack() {
 
   try {
     inactiveAudio.volume = 0;
-    await inactiveShaka.load(t.url);
+    await inactiveShaka.load(t.deezerUrl || t.url);
     inactiveAudio.currentTime = 0;
     _preloadedIdx = ni;
     console.log('[Arya Dual] ✅ Pré-chargé :', t.title, '→ Player', activePlayer === 1 ? 2 : 1);
@@ -2108,36 +2214,151 @@ function updateEnrichBadge(){
 async function enrichTrackManual(trackId){
   const t = tracks.find(x=>x.id===trackId);
   if(!t) return;
-  toast('🔍 Recherche en cours…');
-  try{
-    const info = await fetchItunesMeta(t.title, t.artist);
-    if(!info?.cover){ toast('Aucune pochette trouvée', true); return; }
-    setTrackMeta(t.filename, {
-      cover: info.cover,
-      ...(info.album ? {album: info.album} : {}),
-      ...(info.year  ? {year:  info.year}  : {}),
-      ...(info.genre ? {genre: info.genre} : {}),
-    });
-    t.album = info.album || t.album;
-    t.year  = info.year  || t.year;
-    t.genre = info.genre || t.genre;
-    refreshCoverForTrack(t.id, info.cover);
-    toast('✅ Pochette trouvée !');
-    openEditor(trackId);
-  }catch(e){ toast('Erreur réseau', true); }
+  const query = [t.artist, t.title].filter(Boolean).join(' ');
+  openItunesSearch(trackId, query, 'cover');
 }
 
 async function searchArtistImgManual(trackId){
   const t = tracks.find(x=>x.id===trackId);
   if(!t) return;
-  toast('🔍 Recherche image artiste…');
-  try{
-    const img = await fetchItunesArtistImg(t.artist);
-    if(!img){ toast('Aucune image artiste trouvée', true); return; }
-    setArtistImg(t.artist, img);
-    refreshArtistImg(t.artist, img);
-    toast('✅ Image artiste trouvée !');
-  }catch(e){ toast('Erreur réseau', true); }
+  openItunesSearch(trackId, t.artist, 'artist');
+}
+
+/* ══════════════════════════════════════════════
+   ITUNES SEARCH PICKER
+══════════════════════════════════════════════ */
+let _itunesMode = 'cover'; // 'cover' | 'artist'
+let _itunesTrackId = null;
+window._itunesResults = [];
+
+function openItunesSearch(trackId, query='', mode='cover'){
+  _itunesTrackId = trackId;
+  _itunesMode = mode;
+  const titleEl = document.getElementById('itunesSheetTitle');
+  if(titleEl) titleEl.textContent = mode === 'artist' ? '🎤 Photo artiste' : '🔍 Pochette · iTunes';
+  const inp = document.getElementById('itunesQueryInput');
+  if(inp) inp.value = query;
+  const res = document.getElementById('itunesResults');
+  if(res) res.innerHTML = '<div class="itunes-empty">Tape un nom d\'artiste ou de titre<br>et lance la recherche ✨</div>';
+  document.getElementById('itunesBackdrop').classList.add('open');
+  document.getElementById('itunesSheet').classList.add('open');
+  history.pushState({ arya: 'itunesSheet' }, '');
+  if(query.trim()) setTimeout(runItunesSearch, 150);
+  else if(inp) setTimeout(()=>inp.focus(), 300);
+}
+
+function closeItunesSearch(){
+  const wasOpen = document.getElementById('itunesSheet').classList.contains('open');
+  document.getElementById('itunesBackdrop').classList.remove('open');
+  document.getElementById('itunesSheet').classList.remove('open');
+  if(wasOpen && history.state?.arya === 'itunesSheet') history.back();
+}
+
+async function runItunesSearch(){
+  const q = (document.getElementById('itunesQueryInput')?.value || '').trim();
+  if(!q) return;
+  const res = document.getElementById('itunesResults');
+  res.innerHTML = '<div class="itunes-loading"><div class="spinner" style="width:24px;height:24px;border-width:2px;"></div> Recherche en cours…</div>';
+  try {
+    let url;
+    if(_itunesMode === 'artist'){
+      url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=musicArtist&limit=8`;
+    } else {
+      url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=12&country=fr`;
+    }
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if(!d.results?.length){
+      res.innerHTML = '<div class="itunes-empty">😕 Aucun résultat<br><span style="font-size:11.5px;">Essaie un autre terme de recherche</span></div>';
+      return;
+    }
+    _renderItunesResults(d.results);
+  } catch(e) {
+    res.innerHTML = '<div class="itunes-empty" style="color:var(--rose);">⚠️ Erreur réseau<br><span style="font-size:11.5px;">Vérifie ta connexion et réessaie</span></div>';
+  }
+}
+
+function _renderItunesResults(results){
+  window._itunesResults = results;
+  const res = document.getElementById('itunesResults');
+  const isArtist = _itunesMode === 'artist';
+  res.innerHTML = results.map((item, i) => {
+    const rawCover = item.artworkUrl100 || '';
+    const cover = rawCover.replace('100x100bb','600x600bb').replace('/100x100bb.','/600x600bb.');
+    const title  = isArtist ? (item.artistName||'') : (item.trackName||item.collectionName||'');
+    const artist = isArtist ? '' : (item.artistName||'');
+    const album  = isArtist ? '' : (item.collectionName||'');
+    const year   = isArtist ? '' : (item.releaseDate?.slice(0,4)||'');
+    const genre  = item.primaryGenreName||'';
+    const circleClass = isArtist ? ' circle' : '';
+    return `<div class="itunes-result-card">
+      <div class="itunes-result-cover${circleClass}">
+        ${cover ? `<img src="${esc(cover)}" onerror="this.parentElement.innerHTML='${isArtist?'🎤':'🎵'}'">` : (isArtist?'🎤':'🎵')}
+      </div>
+      <div class="itunes-result-info">
+        <div class="itunes-result-title">${esc(title||'—')}</div>
+        ${artist ? `<div class="itunes-result-artist">${esc(artist)}</div>` : ''}
+        ${album  ? `<div class="itunes-result-album">${esc(album)}</div>`  : ''}
+        ${(year||genre) ? `<div class="itunes-result-meta">${[year,genre].filter(Boolean).join(' · ')}</div>` : ''}
+      </div>
+      <button class="itunes-apply-btn" onclick="applyItunesResult(${i})">✓ Appliquer</button>
+    </div>`;
+  }).join('');
+}
+
+function applyItunesResult(idx){
+  const item = window._itunesResults?.[idx];
+  if(!item) return;
+  const t = tracks.find(x=>x.id===_itunesTrackId);
+
+  if(_itunesMode === 'artist'){
+    const rawImg = item.artworkUrl100 || '';
+    const img = rawImg.replace('100x100bb','600x600bb').replace('/100x100bb.','/600x600bb.');
+    if(!img){ toast('Pas d\'image disponible pour cet artiste', true); return; }
+    const artistName = t?.artist || item.artistName;
+    setArtistImg(artistName, img);
+    refreshArtistImg(artistName, img);
+    toast('✅ Photo artiste appliquée !');
+    closeItunesSearch();
+    return;
+  }
+
+  // Mode pochette
+  const rawCover = item.artworkUrl100 || '';
+  const cover = rawCover.replace('100x100bb','600x600bb').replace('/100x100bb.','/600x600bb.');
+  const album = item.collectionName || '';
+  const year  = item.releaseDate?.slice(0,4) || '';
+  const genre = item.primaryGenreName || '';
+
+  if(cover){
+    const inp = document.getElementById('ed-cover');
+    if(inp) inp.value = cover;
+    _setEdCoverPreview(cover);
+  }
+  const albumInp = document.getElementById('ed-album');
+  const yearInp  = document.getElementById('ed-year');
+  const genreInp = document.getElementById('ed-genre');
+  if(album && albumInp) albumInp.value = album;
+  if(year  && yearInp)  yearInp.value  = year;
+  if(genre && genreInp) genreInp.value = genre;
+
+  if(t && cover){
+    setTrackMeta(t.filename, {
+      cover,
+      ...(album ? {album} : {}),
+      ...(year  ? {year}  : {}),
+      ...(genre ? {genre} : {}),
+    });
+    if(album) t.album = album;
+    if(year)  t.year  = year;
+    if(genre) t.genre = genre;
+    refreshCoverForTrack(t.id, cover);
+    if(currentId === t.id) updatePlayerUI(t);
+  }
+
+  toast('✅ Appliqué — sauvegarde pour confirmer');
+  closeItunesSearch();
 }
 
 function _setEdCoverPreview(url){
@@ -2696,6 +2917,7 @@ async function fetchArchive(){
         genre:saved.genre||parsed.genre,
         length:f.length||0,
         size:f.size||0,
+        ...(saved.deezerUrl ? {deezerUrl: saved.deezerUrl} : {}),
       };
     });
     filtered=[...tracks];
@@ -2706,8 +2928,9 @@ async function fetchArchive(){
     startEnrichment();
   }catch(e){
     console.error(e);
-    document.getElementById('trackList').innerHTML=`<div style="color:var(--text2);padding:48px;text-align:center;">❌ Impossible de charger la bibliothèque.<br><small style="color:var(--text3);">${e.message}</small></div>`;
-    toast('Erreur de chargement',true);
+    const isNetwork = e instanceof TypeError && e.message.includes('fetch');
+    document.getElementById('trackList').innerHTML=`<div style="color:var(--text2);padding:48px;text-align:center;">${isNetwork?'📡':'❌'} ${isNetwork?'Impossible de joindre Archive.org.<br><small style="color:var(--text3);">Vérifiez votre connexion internet.</small>':'Impossible de charger la bibliothèque.<br><small style="color:var(--text3);">' + e.message + '</small>'}</div>`;
+    toast(isNetwork ? '📡 Connexion impossible' : 'Erreur de chargement', true);
   }
 }
 
@@ -2908,6 +3131,7 @@ function selectEdTrack(id){
   document.getElementById('ed-year').value=edTrack.year;
   document.getElementById('ed-genre').value=edTrack.genre;
   document.getElementById('ed-file').value=edTrack.filename;
+  document.getElementById('ed-deezer').value=edTrack.deezerUrl||'';
   // Cover preview
   const cover = getCover(edTrack.filename);
   const grad = gradFor(edTrack.artist+edTrack.album);
@@ -2929,6 +3153,7 @@ function selectEdTrack(id){
 function saveEdMeta(){
   if(!edTrack) return;
   const coverVal = (document.getElementById('ed-cover')?.value||'').trim();
+  const deezerVal = (document.getElementById('ed-deezer')?.value||'').trim();
   const d={
     title:document.getElementById('ed-title').value.trim()||edTrack.title,
     artist:document.getElementById('ed-artist').value.trim()||edTrack.artist,
@@ -2936,17 +3161,19 @@ function saveEdMeta(){
     year:document.getElementById('ed-year').value.trim(),
     genre:document.getElementById('ed-genre').value.trim(),
     ...(coverVal ? {cover: coverVal} : {}),
+    ...(deezerVal ? {deezerUrl: deezerVal} : {deezerUrl: ''}),
   };
   setTrackMeta(edTrack.filename,d);
   const t=tracks.find(x=>x.id===edTrack.id);
   Object.assign(t,d);
+  if(deezerVal) t.deezerUrl = deezerVal; else delete t.deezerUrl;
   edTrack=t;
   if(coverVal) refreshCoverForTrack(edTrack.id, coverVal);
   filtered=[...tracks];
   applySort();
   renderAll();
   if(currentId===edTrack.id) updatePlayerUI(t);
-  toast('✅ Métadonnées sauvegardées');
+  toast(deezerVal ? '✅ Sauvegardé · Source : Deezer 🎵' : '✅ Métadonnées sauvegardées');
 }
 
 function resetEdMeta(){
@@ -3058,7 +3285,17 @@ async function loadAndPlay(t){
 
     if (_shakaPendingLoad) await _shakaPendingLoad;
 
-    await currentShaka.load(t.url);
+    try {
+      await currentShaka.load(t.deezerUrl || t.url);
+    } catch(fetchErr) {
+      // Si l'URL Deezer échoue, on tente l'URL Archive.org en fallback
+      if (t.deezerUrl) {
+        console.warn('[Arya] URL Deezer inaccessible, fallback Archive.org :', fetchErr);
+        await currentShaka.load(t.url);
+      } else {
+        throw fetchErr;
+      }
+    }
 
     currentId = t.id;
     updatePlayerUI(t);
@@ -3118,7 +3355,7 @@ function togglePlay(){
       const t = tracks.find(x => x.id === currentId);
       if(!t) return;
       try {
-        await sh.load(t.url);
+        await sh.load(t.deezerUrl || t.url);
         activeAudio.currentTime = savedPos;
         await activeAudio.play();
         updatePlayerUI(t);
@@ -4178,11 +4415,11 @@ fetchArchive();
   document.head.appendChild(s);
 })();
 
-// ── 3:16 → NOCES POURPRES ──────────────────
+// ── 3:09 → NOCES POURPRES (S3E9) ───────────
 let _316shown = false, _316active = false;
 function check316(t){
   const s = Math.floor(t);
-  if(s===196 && !_316shown){
+  if(s===189 && !_316shown){
     _316shown = true;
     _316active = true;
     const el = document.getElementById('pElapsed');
@@ -4712,7 +4949,7 @@ document.getElementById('wolfPixel').addEventListener('click',()=>{
 /* ══════════════════════════════════════════════
    FULL-SCREEN PLAYER
 ══════════════════════════════════════════════ */
-let _fsOpen = false;
+// _fsOpen est déclaré dans le bloc STATE principal
 
 function openFsPlayerIfMobile(){
   if(window.innerWidth > 640) return;
@@ -4843,6 +5080,11 @@ function closeMoreSheet(){
 
 /* ── Bouton retour physique (Android / PWA) ── */
 window.addEventListener('popstate', function(e){
+  if(document.getElementById('itunesSheet')?.classList.contains('open')){
+    document.getElementById('itunesBackdrop').classList.remove('open');
+    document.getElementById('itunesSheet').classList.remove('open');
+    return;
+  }
   if(document.querySelector('.sidebar')?.classList.contains('open')){
     document.querySelector('.sidebar').classList.remove('open');
     document.getElementById('sidebarBackdrop').classList.remove('open');
