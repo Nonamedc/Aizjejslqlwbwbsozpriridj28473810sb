@@ -1118,6 +1118,152 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
   .upload-file-fields{grid-template-columns:1fr;}
 }
 
+/* ══════════════ PLAYLISTS ══════════════ */
+.playlist-new-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 18px;border-radius:10px;
+  border:1.5px dashed var(--border);cursor:pointer;
+  color:var(--text2);font-size:13.5px;font-weight:500;
+  background:transparent;font-family:'Outfit',sans-serif;
+  transition:all .18s;margin-bottom:18px;width:100%;
+}
+.playlist-new-btn:hover{border-color:var(--accent);color:var(--accent);}
+.playlist-list{display:flex;flex-direction:column;gap:8px;}
+.playlist-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px 16px;
+  cursor:pointer;transition:all .22s;
+  display:flex;align-items:center;gap:14px;
+}
+.playlist-card:hover{background:var(--surface);border-color:rgba(var(--accent-rgb),.4);}
+.playlist-card-art{
+  width:50px;height:50px;border-radius:8px;
+  background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden;
+}
+.playlist-card-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.playlist-card-sub{font-size:12px;color:var(--text2);}
+.playlist-del-btn{
+  margin-left:auto;background:none;border:none;color:var(--text3);
+  font-size:16px;cursor:pointer;padding:6px;border-radius:6px;
+  flex-shrink:0;transition:all .13s;
+}
+.playlist-del-btn:hover{background:var(--rose-glow);color:var(--rose);}
+/* Add-to-playlist sheet */
+.pl-sheet-backdrop{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  opacity:0;pointer-events:none;transition:opacity .22s;
+}
+.pl-sheet-backdrop.open{opacity:1;pointer-events:auto;}
+.pl-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:201;
+  background:var(--bg2);border-top:1px solid var(--border);
+  border-radius:18px 18px 0 0;
+  max-height:72vh;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1,.23,1);
+}
+.pl-sheet.open{transform:translateY(0);}
+.pl-sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:10px auto 0;flex-shrink:0;}
+.pl-sheet-header{padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;}
+.pl-sheet-title{font-size:13.5px;font-weight:700;color:var(--text);flex:1;}
+.pl-sheet-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0;}
+.pl-sheet-list{overflow-y:auto;padding:12px 14px 32px;display:flex;flex-direction:column;gap:6px;}
+.pl-sheet-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;border-radius:10px;
+  background:var(--card);border:1px solid var(--border);
+  cursor:pointer;transition:all .15s;
+}
+.pl-sheet-item:hover{border-color:rgba(var(--accent-rgb),.5);background:var(--surface);}
+.pl-sheet-item-ico{font-size:20px;flex-shrink:0;}
+.pl-sheet-item-name{font-size:13.5px;font-weight:500;color:var(--text);}
+.pl-sheet-item-sub{font-size:11.5px;color:var(--text2);margin-top:1px;}
+.pl-new-input-row{display:flex;gap:8px;margin-bottom:10px;}
+/* ══════════════ DATA VIEW ══════════════ */
+.data-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px;margin-bottom:12px;
+}
+.data-card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px;}
+.data-card-sub{font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:14px;}
+.data-acts{display:flex;gap:8px;flex-wrap:wrap;}
+.data-section-label{
+  font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:12px;margin-top:24px;
+}
+/* ══════════════ LYRICS PANEL (LRC) ══════════════ */
+.fs-lyrics-panel{
+  position:absolute;
+  inset:0;
+  overflow-y:auto;
+  padding:max(56px,calc(18px + env(safe-area-inset-top,0px))) 28px max(100px,calc(80px + env(safe-area-inset-bottom,0px)));
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.28s;
+  background:var(--bg);
+  scrollbar-width:none;
+  z-index:10;
+}
+.lrc-close-btn{
+  position:sticky;top:0;align-self:flex-end;
+  background:rgba(255,255,255,.08);border:none;
+  color:rgba(255,255,255,.5);font-size:18px;
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  transition:background .15s,color .15s;
+  margin-bottom:6px;
+}
+.lrc-close-btn:active{background:rgba(255,255,255,.16);color:#fff;}
+.fs-lyrics-panel::-webkit-scrollbar{display:none;}
+.fs-lyrics-panel.open{opacity:1;pointer-events:auto;}
+.lrc-line{
+  font-size:16px;color:rgba(255,255,255,.18);
+  text-align:center;line-height:1.65;
+  transition:color .35s,font-size .3s,transform .3s,font-weight .2s;
+  max-width:340px;width:100%;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.lrc-line.near{color:rgba(255,255,255,.4);font-size:17px;}
+.lrc-line.active{
+  color:var(--text);font-size:20px;font-weight:600;
+  transform:scale(1.04);
+}
+.lrc-plain{
+  color:rgba(255,255,255,.5);font-size:14px;
+  text-align:center;white-space:pre-line;
+  max-width:340px;line-height:1.8;
+}
+.lrc-empty{
+  color:var(--text3);font-size:13.5px;
+  text-align:center;padding:60px 20px;font-style:italic;
+  line-height:2;
+}
+.lrc-loading{
+  color:var(--text3);font-size:13px;
+  text-align:center;padding:40px 20px;
+  animation:pulse 1.5s ease-in-out infinite;
+}
+.lrc-refresh-btn{
+  margin-top:10px;background:none;border:1px solid var(--border);
+  color:var(--text3);font-size:11.5px;padding:6px 14px;
+  border-radius:20px;cursor:pointer;font-family:'Outfit',sans-serif;
+  transition:all .15s;-webkit-tap-highlight-color:transparent;
+  display:flex;align-items:center;gap:6px;
+}
+.lrc-refresh-btn:active{border-color:var(--accent);color:var(--accent);}
+.lrc-refresh-btn.spinning{animation:spin .7s linear infinite;}
+.fs-lyrics-btn{
+  background:none;border:none;
+  color:rgba(255,255,255,.28);font-size:19px;
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:color .15s,background .15s;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+.fs-lyrics-btn:active{color:rgba(255,255,255,.7);}
+.fs-lyrics-btn.on{color:var(--accent);}
 /* ── EASTER EGGS ── pas aujourd'hui ── */
 @keyframes knifeSlash{
   0%{left:-80px;opacity:1;transform:translateY(-50%) scaleX(-1);}
@@ -1174,6 +1320,10 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
     <div class="nav-item" data-view="history" onclick="showView('history')">
       <span class="nav-icon">🕐</span> Historique
     </div>
+    <div class="nav-item" data-view="playlists" onclick="showView('playlists')">
+      <span class="nav-icon">📋</span> Playlists
+      <span class="nav-badge" id="plBadge" style="display:none;">0</span>
+    </div>
   </div>
 
   <div class="nav-section" style="margin-top:8px;">
@@ -1196,6 +1346,9 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
     <div class="nav-item" data-view="upload" onclick="showView('upload')">
       <span class="nav-icon">📤</span> Ajouter
     </div>
+    <div class="nav-item" data-view="data" onclick="showView('data')">
+      <span class="nav-icon">💾</span> Import / Export
+    </div>
   </div>
 
   <div class="sidebar-footer">
@@ -1215,7 +1368,7 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
       <span class="search-ico">🔍</span>
       <input class="search-input" id="searchInput" placeholder="Chercher un titre, artiste, album..." oninput="onSearch()">
     </div>
-    <div id="playingBanner" style="display:none;margin-left:auto;font-size:12.5px;color:var(--text2);display:flex;align-items:center;gap:8px;">
+    <div id="playingBanner" style="display:none;margin-left:auto;font-size:12.5px;color:var(--text2);align-items:center;gap:8px;">
       <span id="bannerText"></span>
     </div>
   </div>
@@ -1495,6 +1648,68 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
     <!-- Summary -->
     <div class="upload-summary" id="uploadSummary"></div>
   </div>
+  <!-- ── PLAYLISTS VIEW ── -->
+  <div class="view" id="view-playlists">
+    <div class="view-header">
+      <div class="view-title">📋 Playlists</div>
+      <div class="view-sub" id="plCount">—</div>
+    </div>
+    <button class="playlist-new-btn" onclick="promptCreatePlaylist()">
+      <span style="font-size:22px;">＋</span>
+      <span>Nouvelle playlist</span>
+    </button>
+    <div class="playlist-list" id="playlistList"></div>
+  </div>
+
+  <!-- ── DATA VIEW ── -->
+  <div class="view" id="view-data">
+    <div class="view-header">
+      <div class="view-title">💾 Import / Export</div>
+      <div class="view-sub">Sauvegardez ou restaurez toutes vos données Arya</div>
+    </div>
+    <div class="data-section-label" style="margin-top:0;">Export</div>
+    <div class="data-card">
+      <div class="data-card-title">📦 Exporter toutes les données</div>
+      <div class="data-card-sub">
+        Télécharge un fichier JSON contenant vos métadonnées modifiées, favoris, historique d'écoute, statistiques, playlists et images d'artistes.<br>
+        Idéal pour sauvegarder avant un changement d'appareil.
+      </div>
+      <div class="data-acts">
+        <button class="btn btn-acc" onclick="exportData()">⬇️ Télécharger l'export</button>
+      </div>
+    </div>
+    <div class="data-section-label">Import</div>
+    <div class="data-card">
+      <div class="data-card-title">🔀 Fusionner avec un export</div>
+      <div class="data-card-sub">
+        Importe un fichier JSON Arya et <strong>fusionne</strong> les données avec vos données actuelles.<br>
+        Favoris, playlists et statistiques sont combinés. Vos données existantes ne sont pas effacées.
+      </div>
+      <div class="data-acts">
+        <button class="btn btn-ghost" onclick="importData('merge')">📂 Choisir un fichier</button>
+      </div>
+    </div>
+    <div class="data-card">
+      <div class="data-card-title">♻️ Remplacer toutes les données</div>
+      <div class="data-card-sub">
+        Importe un fichier JSON Arya et <strong>remplace complètement</strong> vos données locales.<br>
+        ⚠️ Action irréversible — à utiliser pour restaurer une sauvegarde.
+      </div>
+      <div class="data-acts">
+        <button class="btn btn-rose" onclick="importData('replace')">⚠️ Remplacer</button>
+      </div>
+    </div>
+    <div class="data-section-label">Réinitialisation</div>
+    <div class="data-card">
+      <div class="data-card-title">🗑 Effacer toutes les données locales</div>
+      <div class="data-card-sub">
+        Supprime définitivement les métadonnées, favoris, historique, stats et playlists stockés sur cet appareil.
+      </div>
+      <div class="data-acts">
+        <button class="btn btn-ghost" onclick="clearAllData()" style="border-color:var(--rose);color:var(--rose);">🗑 Tout effacer</button>
+      </div>
+    </div>
+  </div>
 
 </main>
 
@@ -1588,6 +1803,12 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
     <div class="more-item" id="moreUpload" data-view="upload" onclick="showViewFromMore('upload')">
       <span class="more-ico">📤</span>Ajouter
     </div>
+    <div class="more-item" id="morePlaylists" data-view="playlists" onclick="showViewFromMore('playlists')">
+      <span class="more-ico">📋</span>Playlists
+    </div>
+    <div class="more-item" id="moreData" data-view="data" onclick="showViewFromMore('data')">
+      <span class="more-ico">💾</span>Import/Export
+    </div>
   </div>
 </div>
 
@@ -1602,7 +1823,8 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
     </div>
     <div class="itunes-search-row">
       <input class="itunes-query-input" id="itunesQueryInput" placeholder="Artiste – Titre…"
-             onkeydown="if(event.key==='Enter')runItunesSearch()">
+             onkeydown="if(event.key==='Enter')runItunesSearch()"
+             oninput="_itunesDebounce()">
       <button class="btn btn-acc" style="padding:9px 16px;font-size:13px;white-space:nowrap;" onclick="runItunesSearch()">🔍 Chercher</button>
     </div>
   </div>
@@ -1611,7 +1833,16 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
   </div>
 </div>
 
-<!-- FULL-SCREEN PLAYER (mobile) -->
+<!-- ADD-TO-PLAYLIST SHEET -->
+<div class="pl-sheet-backdrop" id="plSheetBackdrop" onclick="closePlSheet()"></div>
+<div class="pl-sheet" id="plSheet">
+  <div class="pl-sheet-handle"></div>
+  <div class="pl-sheet-header">
+    <span class="pl-sheet-title">🎵 Ajouter à une playlist</span>
+    <button class="pl-sheet-close" onclick="closePlSheet()">✕</button>
+  </div>
+  <div class="pl-sheet-list" id="plSheetList"></div>
+</div>
 <div class="fs-player" id="fsPlayer">
 
   <!-- Handle (tap to close) -->
@@ -1651,7 +1882,15 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
     <span class="fs-vol-ico">🔊</span>
   </div>
 
-  <div class="fs-swipe-hint">← glisser pour changer →</div>
+  <!-- Lyrics toggle + swipe hint row -->
+  <div style="display:flex;align-items:center;gap:14px;width:100%;justify-content:center;">
+    <div class="fs-swipe-hint" style="flex:1;text-align:right;">← glisser →</div>
+    <button class="fs-lyrics-btn" id="fsLyricsBtn" onclick="toggleLyricsPanel()" title="Paroles">🎤</button>
+    <div style="flex:1;"></div>
+  </div>
+
+  <!-- Lyrics panel (absolute over the whole FS player) -->
+  <div class="fs-lyrics-panel" id="fsLyricsPanel"></div>
 
 </div>
 
@@ -1683,6 +1922,7 @@ const ABLY_CH      = 'arya-presence-v1';
 const MAX_HIST     = 150;
 const ARTIST_IMG_STORE = 'arya_artist_imgs_v1';
 const ARCHIVE_CREDS_STORE = 'arya_archive_creds_v1';
+const LRC_STORE           = 'arya_lrc_v1';
 
 /* ═══════════════════════════════════════════
    STATE
@@ -1707,6 +1947,12 @@ let onlineUsers  = {};
 
 // Full-screen player state (déclaré en var car utilisé dans un autre bloc script)
 var _fsOpen = false;
+
+// LRC / lyrics state
+var _lrcLines     = [];   // [{time, text}] pour la chanson courante
+var _lrcPlain     = '';   // paroles brutes (fallback)
+var _lrcActiveIdx = -1;
+var _lyricsOpen   = false;
 
 // Party state
 var partyMode    = null; // null | 'host' | 'listener'
@@ -2107,41 +2353,139 @@ function refreshArtistImg(artistName, imgUrl){
 }
 
 /* ═══════════════════════════════════════════
-   ITUNES API ENRICHMENT
+   MULTI-SOURCE COVER ENRICHMENT
+   Ordre : Deezer (1000×1000) → iTunes (fallback)
 ═══════════════════════════════════════════ */
 let _enrichQueue = [];
 let _enrichRunning = false;
 let _enrichDone = 0;
 let _enrichTotal = 0;
 
-async function fetchItunesMeta(title, artist){
-  const q = encodeURIComponent(`${artist} ${title}`);
-  const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&limit=5&country=fr`);
+/* ── Normalise un nom pour comparaison multi-source ── */
+function _normArtist(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/\s*[\(\[](feat|ft|with|avec)\.?\s[^\)\]]+[\)\]].*$/i,'')
+    .replace(/[^a-z0-9\s]/g,'').trim();
+}
+function _normTitle(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/\s*[\(\[](feat|ft|with|avec)\.?\s[^\)\]]+[\)\]]/i,'')
+    .trim();
+}
+
+/* ════════════════════════════════
+   SOURCE 1 : DEEZER (1000×1000)
+════════════════════════════════ */
+async function fetchDeezerMeta(title, artist){
+  const cleanArtist = _normArtist(artist);
+  const cleanTitle  = _normTitle(title);
+  const queries = [
+    `artist:"${artist}" track:"${title}"`,
+    `${artist} ${title}`,
+    title,
+  ];
+  for(const q of queries){
+    let d;
+    try{
+      const r = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=10`);
+      if(!r.ok) continue;
+      d = await r.json();
+    }catch{ continue; }
+    const data = d?.data || [];
+    if(!data.length) continue;
+    const norm = x => _normArtist(x.artist?.name||'');
+    const m = data.find(x => norm(x) === cleanArtist)
+           || data.find(x => norm(x).includes(cleanArtist) || cleanArtist.includes(norm(x)))
+           || data[0];
+    const cover = m?.album?.cover_xl || m?.album?.cover_big;
+    if(cover) return { cover, album: m.album?.title||null, year:null, genre:null, artistName: m.artist?.name||null, _source:'deezer' };
+  }
+  return null;
+}
+
+async function fetchDeezerArtistImg(artist){
+  try{
+    const r = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(artist)}&limit=5`);
+    if(!r.ok) return null;
+    const d = await r.json();
+    const ca = _normArtist(artist);
+    const m = d.data?.find(x => _normArtist(x.name||'') === ca)
+           || d.data?.find(x => _normArtist(x.name||'').includes(ca))
+           || d.data?.[0];
+    return m?.picture_xl || m?.picture_big || null;
+  }catch{ return null; }
+}
+
+/* ════════════════════════════════
+   SOURCE 2 : iTunes (fallback)
+════════════════════════════════ */
+async function _itunesFetch(url){
+  const r = await fetch(url);
   if(!r.ok) return null;
   const d = await r.json();
-  if(!d.results?.length) return null;
-  // Prefer exact artist match
-  const m = d.results.find(x=>x.artistName?.toLowerCase()===artist.toLowerCase()) || d.results[0];
-  return {
-    cover: m.artworkUrl100?.replace('100x100bb','600x600bb')?.replace('/100x100bb.','/600x600bb.') || null,
-    album: m.collectionName || null,
-    year:  m.releaseDate?.slice(0,4) || null,
-    genre: m.primaryGenreName || null,
-    artistName: m.artistName || null,
-  };
+  return d.results?.length ? d.results : null;
+}
+
+async function fetchItunesMeta(title, artist){
+  const cleanArtist = _normArtist(artist);
+  const cleanTitle  = _normTitle(title);
+  const queries = [
+    `${cleanArtist} ${cleanTitle}`,
+    cleanTitle,
+    `${cleanTitle} ${cleanArtist}`,
+  ];
+  for(const q of queries){
+    const results = await _itunesFetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=8&country=fr`
+    ).catch(()=>null);
+    if(!results) continue;
+    const norm = r => _normArtist(r.artistName||'');
+    const m = results.find(r => norm(r) === cleanArtist)
+           || results.find(r => norm(r).includes(cleanArtist) || cleanArtist.includes(norm(r)))
+           || results[0];
+    if(m?.artworkUrl100){
+      const cover = m.artworkUrl100.replace(/\/\d+x\d+bb\./, '/1000x1000bb.').replace('100x100bb','1000x1000bb');
+      return { cover, album: m.collectionName||null, year: m.releaseDate?.slice(0,4)||null, genre: m.primaryGenreName||null, artistName: m.artistName||null, _source:'itunes' };
+    }
+  }
+  return null;
 }
 
 async function fetchItunesArtistImg(artist){
-  const q = encodeURIComponent(artist);
-  const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=musicArtist&limit=5`);
-  if(!r.ok) return null;
-  const d = await r.json();
-  const m = d.results?.find(x=>x.artistName?.toLowerCase()===artist.toLowerCase()) || d.results?.[0];
-  const url = m?.artworkUrl100;
-  if(!url) return null;
-  return url.replace('100x100bb','600x600bb').replace('/100x100bb.','/600x600bb.');
+  try{
+    const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&media=music&entity=musicArtist&limit=5`);
+    if(!r.ok) return null;
+    const d = await r.json();
+    const ca = _normArtist(artist);
+    const m = d.results?.find(x => _normArtist(x.artistName||'') === ca)
+           || d.results?.find(x => _normArtist(x.artistName||'').includes(ca))
+           || d.results?.[0];
+    const url = m?.artworkUrl100;
+    if(!url) return null;
+    return url.replace(/\/\d+x\d+bb\./, '/1000x1000bb.').replace('100x100bb','1000x1000bb');
+  }catch{ return null; }
 }
 
+/* ════════════════════════════════
+   ORCHESTRATEUR : Deezer → iTunes
+════════════════════════════════ */
+async function fetchBestCover(title, artist){
+  const dz = await fetchDeezerMeta(title, artist).catch(()=>null);
+  if(dz?.cover) return dz;
+  return fetchItunesMeta(title, artist).catch(()=>null);
+}
+
+async function fetchBestArtistImg(artist){
+  const dz = await fetchDeezerArtistImg(artist).catch(()=>null);
+  if(dz) return dz;
+  return fetchItunesArtistImg(artist).catch(()=>null);
+}
+
+/* ════════════════════════════════
+   ENRICHISSEMENT AUTO (3 workers)
+════════════════════════════════ */
 async function startEnrichment(){
   const meta = getMeta();
   _enrichQueue = tracks.filter(t => !meta[t.filename]?.cover).map(t => t.filename);
@@ -2151,17 +2495,24 @@ async function startEnrichment(){
   if(_enrichRunning) return;
   _enrichRunning = true;
   updateEnrichBadge();
-  processEnrichQueue();
+  await Promise.all([processEnrichWorker(), processEnrichWorker(), processEnrichWorker()]);
+  _enrichRunning = false;
+  updateEnrichBadge();
+  renderAlbums();
+  renderArtists();
+  renderDashboard();
 }
 
-async function processEnrichQueue(){
-  const artistsDone = new Set();
+const _artistsEnriched = new Set();
+
+async function processEnrichWorker(){
   while(_enrichQueue.length > 0){
     const fn = _enrichQueue.shift();
+    if(!fn) break;
     const t = tracks.find(x=>x.filename===fn);
     if(!t){ _enrichDone++; updateEnrichBadge(); continue; }
     try{
-      const info = await fetchItunesMeta(t.title, t.artist);
+      const info = await fetchBestCover(t.title, t.artist);
       if(info?.cover){
         const cur = getMeta()[fn] || {};
         setTrackMeta(fn, {
@@ -2170,7 +2521,6 @@ async function processEnrichQueue(){
           ...(!cur.year && info.year ? {year: info.year} : {}),
           ...(!cur.genre && info.genre ? {genre: info.genre} : {}),
         });
-        // Sync track in memory
         const tr = tracks.find(x=>x.filename===fn);
         if(tr){
           if(!tr.album || tr.album==='Sans album') tr.album = info.album || tr.album;
@@ -2179,24 +2529,17 @@ async function processEnrichQueue(){
         }
         refreshCoverForTrack(t.id, info.cover);
       }
-      // Artist image (once per artist)
-      if(!artistsDone.has(t.artist) && !getArtistImg(t.artist)){
-        artistsDone.add(t.artist);
-        fetchItunesArtistImg(t.artist).then(img=>{
+      if(!_artistsEnriched.has(t.artist) && !getArtistImg(t.artist)){
+        _artistsEnriched.add(t.artist);
+        fetchBestArtistImg(t.artist).then(img=>{
           if(img){ setArtistImg(t.artist, img); refreshArtistImg(t.artist, img); }
         }).catch(()=>{});
       }
-    }catch(e){ /* réseau down, on skip */ }
+    }catch(e){}
     _enrichDone++;
     updateEnrichBadge();
-    await new Promise(r=>setTimeout(r,500));
+    await new Promise(r=>setTimeout(r,200));
   }
-  _enrichRunning = false;
-  updateEnrichBadge();
-  // Refresh albums/artists cards with real covers
-  renderAlbums();
-  renderArtists();
-  renderDashboard();
 }
 
 function updateEnrichBadge(){
@@ -2214,37 +2557,83 @@ function updateEnrichBadge(){
 async function enrichTrackManual(trackId){
   const t = tracks.find(x=>x.id===trackId);
   if(!t) return;
-  const query = [t.artist, t.title].filter(Boolean).join(' ');
-  openItunesSearch(trackId, query, 'cover');
+  openCoverSearch(trackId, [t.artist, t.title].filter(Boolean).join(' '), 'cover');
 }
 
 async function searchArtistImgManual(trackId){
   const t = tracks.find(x=>x.id===trackId);
   if(!t) return;
-  openItunesSearch(trackId, t.artist, 'artist');
+  openCoverSearch(trackId, t.artist, 'artist');
 }
 
-/* ══════════════════════════════════════════════
-   ITUNES SEARCH PICKER
-══════════════════════════════════════════════ */
-let _itunesMode = 'cover'; // 'cover' | 'artist'
-let _itunesTrackId = null;
-window._itunesResults = [];
+/* ═══════════════════════════════════════════════════
+   COVER SEARCH PICKER — Deezer 🟠 + iTunes 🔴
+═══════════════════════════════════════════════════ */
+let _coverMode = 'cover';       // 'cover' | 'artist'
+let _coverTrackId = null;
+window._coverResults = [];
 
-function openItunesSearch(trackId, query='', mode='cover'){
-  _itunesTrackId = trackId;
-  _itunesMode = mode;
+/* Normalise un résultat Deezer en objet commun */
+function _normDeezerResult(item, mode){
+  if(mode === 'artist') return {
+    _source:'deezer', cover: item.picture_xl||item.picture_big||null,
+    title: item.name||'', artist:'', album:'', year:'', genre:'',
+  };
+  return {
+    _source:'deezer',
+    cover:  item.album?.cover_xl || item.album?.cover_big || null,
+    title:  item.title || '',
+    artist: item.artist?.name || '',
+    album:  item.album?.title || '',
+    year:'', genre:'',
+  };
+}
+
+/* Normalise un résultat iTunes en objet commun */
+function _normItunesResult(item, mode){
+  const rawCover = item.artworkUrl100||'';
+  const cover = rawCover
+    ? rawCover.replace(/\/\d+x\d+bb\./, '/1000x1000bb.').replace('100x100bb','1000x1000bb')
+    : null;
+  if(mode === 'artist') return {
+    _source:'itunes', cover,
+    title: item.artistName||'', artist:'', album:'', year:'', genre: item.primaryGenreName||'',
+  };
+  return {
+    _source:'itunes', cover,
+    title:  item.trackName||item.collectionName||'',
+    artist: item.artistName||'',
+    album:  item.collectionName||'',
+    year:   item.releaseDate?.slice(0,4)||'',
+    genre:  item.primaryGenreName||'',
+  };
+}
+
+function openCoverSearch(trackId, query='', mode='cover'){
+  _coverTrackId = trackId;
+  _coverMode = mode;
   const titleEl = document.getElementById('itunesSheetTitle');
-  if(titleEl) titleEl.textContent = mode === 'artist' ? '🎤 Photo artiste' : '🔍 Pochette · iTunes';
+  if(titleEl) titleEl.textContent = mode === 'artist' ? '🎤 Photo artiste' : '🔍 Pochette · Deezer + iTunes';
   const inp = document.getElementById('itunesQueryInput');
   if(inp) inp.value = query;
   const res = document.getElementById('itunesResults');
-  if(res) res.innerHTML = '<div class="itunes-empty">Tape un nom d\'artiste ou de titre<br>et lance la recherche ✨</div>';
+  if(res) res.innerHTML = '<div class="itunes-empty">Tape un nom et lance la recherche ✨</div>';
   document.getElementById('itunesBackdrop').classList.add('open');
   document.getElementById('itunesSheet').classList.add('open');
   history.pushState({ arya: 'itunesSheet' }, '');
-  if(query.trim()) setTimeout(runItunesSearch, 150);
+  if(query.trim()) setTimeout(runCoverSearch, 150);
   else if(inp) setTimeout(()=>inp.focus(), 300);
+}
+
+/* Alias rétrocompatibilité */
+function openItunesSearch(trackId, query, mode){ openCoverSearch(trackId, query, mode); }
+
+let _coverDebounceTimer = null;
+function _itunesDebounce(){
+  clearTimeout(_coverDebounceTimer);
+  const q = (document.getElementById('itunesQueryInput')?.value||'').trim();
+  if(q.length < 2) return;
+  _coverDebounceTimer = setTimeout(runCoverSearch, 500);
 }
 
 function closeItunesSearch(){
@@ -2254,110 +2643,132 @@ function closeItunesSearch(){
   if(wasOpen && history.state?.arya === 'itunesSheet') history.back();
 }
 
-async function runItunesSearch(){
+/* Lance Deezer + iTunes en parallèle, fusionne, Deezer en tête */
+async function runCoverSearch(){
   const q = (document.getElementById('itunesQueryInput')?.value || '').trim();
   if(!q) return;
   const res = document.getElementById('itunesResults');
-  res.innerHTML = '<div class="itunes-loading"><div class="spinner" style="width:24px;height:24px;border-width:2px;"></div> Recherche en cours…</div>';
-  try {
-    let url;
-    if(_itunesMode === 'artist'){
-      url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=musicArtist&limit=8`;
+  res.innerHTML = '<div class="itunes-loading"><div class="spinner" style="width:24px;height:24px;border-width:2px;"></div> Deezer + iTunes…</div>';
+  const mode = _coverMode;
+  try{
+    let dz = [], it = [];
+    if(mode === 'artist'){
+      [dz, it] = await Promise.all([
+        fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(q)}&limit=8`).then(r=>r.ok?r.json():null).catch(()=>null).then(d=>(d?.data||[]).map(x=>_normDeezerResult(x,'artist'))),
+        fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=musicArtist&limit=8`).then(r=>r.ok?r.json():null).catch(()=>null).then(d=>(d?.results||[]).map(x=>_normItunesResult(x,'artist'))),
+      ]);
     } else {
-      url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=12&country=fr`;
+      [dz, it] = await Promise.all([
+        // Deezer : 2 requêtes parallèles fusionnées
+        Promise.all([
+          fetch(`https://api.deezer.com/search?q=${encodeURIComponent('artist:"'+q+'"')}&limit=10`).then(r=>r.ok?r.json():null).catch(()=>null),
+          fetch(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=10`).then(r=>r.ok?r.json():null).catch(()=>null),
+        ]).then(([a,b])=>{
+          const all=[...(a?.data||[]),...(b?.data||[])];
+          const seen=new Set();
+          return all.filter(x=>{ if(seen.has(x.id)) return false; seen.add(x.id); return true; }).map(x=>_normDeezerResult(x,'cover'));
+        }),
+        // iTunes : FR + global fusionnés
+        Promise.all([
+          fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=10&country=fr`).then(r=>r.ok?r.json():null).catch(()=>null),
+          fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=8`).then(r=>r.ok?r.json():null).catch(()=>null),
+        ]).then(([a,b])=>{
+          const all=[...(a?.results||[]),...(b?.results||[])];
+          const seen=new Set();
+          return all.filter(x=>{ const k=x.trackId||x.collectionId; if(seen.has(k)) return false; seen.add(k); return true; }).map(x=>_normItunesResult(x,'cover'));
+        }),
+      ]);
     }
-    const r = await fetch(url);
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-    if(!d.results?.length){
-      res.innerHTML = '<div class="itunes-empty">😕 Aucun résultat<br><span style="font-size:11.5px;">Essaie un autre terme de recherche</span></div>';
+    const merged = [...dz, ...it].filter(x=>x.cover);
+    if(!merged.length){
+      res.innerHTML = '<div class="itunes-empty">😕 Aucun résultat<br><span style="font-size:11.5px;">Essaie un autre terme</span></div>';
       return;
     }
-    _renderItunesResults(d.results);
-  } catch(e) {
-    res.innerHTML = '<div class="itunes-empty" style="color:var(--rose);">⚠️ Erreur réseau<br><span style="font-size:11.5px;">Vérifie ta connexion et réessaie</span></div>';
+    _renderCoverResults(merged.slice(0, 20));
+  }catch(e){
+    res.innerHTML = '<div class="itunes-empty" style="color:var(--rose);">⚠️ Erreur réseau</div>';
   }
 }
 
-function _renderItunesResults(results){
-  window._itunesResults = results;
+/* Alias rétrocompatibilité */
+function runItunesSearch(){ return runCoverSearch(); }
+
+function _renderCoverResults(results){
+  window._coverResults = results;
   const res = document.getElementById('itunesResults');
-  const isArtist = _itunesMode === 'artist';
-  res.innerHTML = results.map((item, i) => {
-    const rawCover = item.artworkUrl100 || '';
-    const cover = rawCover.replace('100x100bb','600x600bb').replace('/100x100bb.','/600x600bb.');
-    const title  = isArtist ? (item.artistName||'') : (item.trackName||item.collectionName||'');
-    const artist = isArtist ? '' : (item.artistName||'');
-    const album  = isArtist ? '' : (item.collectionName||'');
-    const year   = isArtist ? '' : (item.releaseDate?.slice(0,4)||'');
-    const genre  = item.primaryGenreName||'';
+  const isArtist = _coverMode === 'artist';
+  const nDz = results.filter(x=>x._source==='deezer').length;
+  const nIt = results.filter(x=>x._source==='itunes').length;
+  const countBar = `<div style="font-size:11px;color:var(--text3);padding:0 4px 10px;display:flex;gap:8px;align-items:center;">
+    <span>${results.length} résultat${results.length>1?'s':''}</span>
+    ${nDz?`<span style="background:rgba(250,83,6,.18);color:#fa5306;border-radius:8px;padding:1px 7px;font-weight:600;">Deezer ${nDz}</span>`:''}
+    ${nIt?`<span style="background:rgba(252,60,68,.12);color:#fc3c44;border-radius:8px;padding:1px 7px;font-weight:600;">iTunes ${nIt}</span>`:''}
+  </div>`;
+  res.innerHTML = countBar + results.map((item, i) => {
     const circleClass = isArtist ? ' circle' : '';
+    const srcBadge = item._source === 'deezer'
+      ? `<span style="position:absolute;top:4px;left:4px;background:rgba(250,83,6,.88);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;">DEEZER</span>`
+      : `<span style="position:absolute;top:4px;left:4px;background:rgba(252,60,68,.88);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;">iTUNES</span>`;
     return `<div class="itunes-result-card">
-      <div class="itunes-result-cover${circleClass}">
-        ${cover ? `<img src="${esc(cover)}" onerror="this.parentElement.innerHTML='${isArtist?'🎤':'🎵'}'">` : (isArtist?'🎤':'🎵')}
+      <div class="itunes-result-cover${circleClass}" style="position:relative;">
+        ${item.cover ? `<img src="${esc(item.cover)}" onerror="this.style.display='none'">` : (isArtist?'🎤':'🎵')}
+        ${srcBadge}
       </div>
       <div class="itunes-result-info">
-        <div class="itunes-result-title">${esc(title||'—')}</div>
-        ${artist ? `<div class="itunes-result-artist">${esc(artist)}</div>` : ''}
-        ${album  ? `<div class="itunes-result-album">${esc(album)}</div>`  : ''}
-        ${(year||genre) ? `<div class="itunes-result-meta">${[year,genre].filter(Boolean).join(' · ')}</div>` : ''}
+        <div class="itunes-result-title">${esc(item.title||'—')}</div>
+        ${item.artist ? `<div class="itunes-result-artist">${esc(item.artist)}</div>` : ''}
+        ${item.album  ? `<div class="itunes-result-album">${esc(item.album)}</div>` : ''}
+        ${(item.year||item.genre) ? `<div class="itunes-result-meta">${[item.year,item.genre].filter(Boolean).join(' · ')}</div>` : ''}
       </div>
-      <button class="itunes-apply-btn" onclick="applyItunesResult(${i})">✓ Appliquer</button>
+      <button class="itunes-apply-btn" onclick="applyCoverResult(${i})">✓ Appliquer</button>
     </div>`;
   }).join('');
 }
 
-function applyItunesResult(idx){
-  const item = window._itunesResults?.[idx];
-  if(!item) return;
-  const t = tracks.find(x=>x.id===_itunesTrackId);
+/* Alias rétrocompatibilité */
+function _renderItunesResults(r){ _renderCoverResults(r); }
+function applyItunesResult(i){ applyCoverResult(i); }
 
-  if(_itunesMode === 'artist'){
-    const rawImg = item.artworkUrl100 || '';
-    const img = rawImg.replace('100x100bb','600x600bb').replace('/100x100bb.','/600x600bb.');
-    if(!img){ toast('Pas d\'image disponible pour cet artiste', true); return; }
-    const artistName = t?.artist || item.artistName;
-    setArtistImg(artistName, img);
-    refreshArtistImg(artistName, img);
-    toast('✅ Photo artiste appliquée !');
+function applyCoverResult(idx){
+  const item = window._coverResults?.[idx];
+  if(!item) return;
+  const t = tracks.find(x=>x.id===_coverTrackId);
+
+  if(_coverMode === 'artist'){
+    if(!item.cover){ toast("Pas d'image disponible", true); return; }
+    const artistName = t?.artist || item.title;
+    setArtistImg(artistName, item.cover);
+    refreshArtistImg(artistName, item.cover);
+    toast(`✅ Photo artiste appliquée ! (${item._source === 'deezer' ? '🟠 Deezer' : '🔴 iTunes'})`);
     closeItunesSearch();
     return;
   }
 
   // Mode pochette
-  const rawCover = item.artworkUrl100 || '';
-  const cover = rawCover.replace('100x100bb','600x600bb').replace('/100x100bb.','/600x600bb.');
-  const album = item.collectionName || '';
-  const year  = item.releaseDate?.slice(0,4) || '';
-  const genre = item.primaryGenreName || '';
-
-  if(cover){
+  if(item.cover){
     const inp = document.getElementById('ed-cover');
-    if(inp) inp.value = cover;
-    _setEdCoverPreview(cover);
+    if(inp) inp.value = item.cover;
+    _setEdCoverPreview(item.cover);
   }
-  const albumInp = document.getElementById('ed-album');
-  const yearInp  = document.getElementById('ed-year');
-  const genreInp = document.getElementById('ed-genre');
-  if(album && albumInp) albumInp.value = album;
-  if(year  && yearInp)  yearInp.value  = year;
-  if(genre && genreInp) genreInp.value = genre;
+  if(item.album){ const el=document.getElementById('ed-album'); if(el) el.value=item.album; }
+  if(item.year){  const el=document.getElementById('ed-year');  if(el) el.value=item.year;  }
+  if(item.genre){ const el=document.getElementById('ed-genre'); if(el) el.value=item.genre; }
 
-  if(t && cover){
+  if(t && item.cover){
     setTrackMeta(t.filename, {
-      cover,
-      ...(album ? {album} : {}),
-      ...(year  ? {year}  : {}),
-      ...(genre ? {genre} : {}),
+      cover: item.cover,
+      ...(item.album ? {album: item.album} : {}),
+      ...(item.year  ? {year:  item.year}  : {}),
+      ...(item.genre ? {genre: item.genre} : {}),
     });
-    if(album) t.album = album;
-    if(year)  t.year  = year;
-    if(genre) t.genre = genre;
-    refreshCoverForTrack(t.id, cover);
+    if(item.album) t.album = item.album;
+    if(item.year)  t.year  = item.year;
+    if(item.genre) t.genre = item.genre;
+    refreshCoverForTrack(t.id, item.cover);
     if(currentId === t.id) updatePlayerUI(t);
   }
 
-  toast('✅ Appliqué — sauvegarde pour confirmer');
+  toast(`✅ Appliqué — sauvegarde pour confirmer (${item._source === 'deezer' ? '🟠 Deezer 1000px' : '🔴 iTunes 1000px'})`);
   closeItunesSearch();
 }
 
@@ -2371,6 +2782,129 @@ function _setEdCoverPreview(url){
   }
 }
 
+/* ── Vérifie qu'une URL est bien une image (pas une page web) ── */
+function _isImageUrl(url){
+  if(!url || typeof url !== 'string') return false;
+  // CDNs connus : Spotify/Scdn, SoundCloud, Deezer, Apple/MZStatic
+  if(/i\.scdn\.co|i1\.sndcdn\.com|e-cdns-images\.dzcdn\.net|is\d*\.mzstatic\.com|lh3\.googleusercontent\.com/.test(url)) return true;
+  return /\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(url);
+}
+
+/* ── Recherche album sur Deezer + genre via /album/{id} ── */
+async function _fetchDeezerAlbumMeta(albumName, artistName){
+  try{
+    const q = (artistName ? artistName + ' ' : '') + albumName;
+    const r = await fetch('https://api.deezer.com/search/album?q='+encodeURIComponent(q)+'&limit=8');
+    if(!r.ok) return null;
+    const d = await r.json();
+    const albums = d.data||[];
+    if(!albums.length) return null;
+
+    const normAl = _normTitle(albumName);
+    const normAr = _normArtist(artistName||'');
+    const match = albums.find(a => _normTitle(a.title||'')===normAl && (!normAr||_normArtist(a.artist?.name||'')===normAr))
+               || albums.find(a => _normTitle(a.title||'').includes(normAl)||normAl.includes(_normTitle(a.title||'')))
+               || albums[0];
+    if(!match) return null;
+
+    const cover = match.cover_xl || match.cover_big || null;
+
+    // Récupère genre via l'endpoint complet de l'album
+    const full = await fetch('https://api.deezer.com/album/'+match.id).then(r=>r.ok?r.json():null).catch(()=>null);
+    const genre = full?.genres?.data?.[0]?.name || null;
+    const year  = (full?.release_date||'').slice(0,4)||null;
+
+    return { cover, genre, year, album: match.title||albumName, artist: match.artist?.name||artistName };
+  }catch{ return null; }
+}
+
+/* ── Chemin dédié pour les liens album Spotify ── */
+async function _handleSpotifyAlbumUrl(url){
+  toast('🟢 Album Spotify détecté — récupération…');
+
+  const proxies = [
+    u => 'https://corsproxy.io/?'+encodeURIComponent(u),
+    u => 'https://api.allorigins.win/get?url='+encodeURIComponent(u),
+    u => 'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u),
+  ];
+
+  let albumName='', artistName='', cover='', year='';
+
+  for(const makeUrl of proxies){
+    try{
+      const r = await fetch(makeUrl(url), {signal: AbortSignal.timeout(8000)});
+      if(!r.ok) continue;
+      const raw = await r.text();
+      let html; try{ const j=JSON.parse(raw); html=j.contents||raw; }catch{ html=raw; }
+      if(!html?.includes('<')) continue;
+
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const og  = n => doc.querySelector('meta[property="og:'+n+'"]')?.content||'';
+
+      // Pochette : og:image pointe vers i.scdn.co — valider
+      const rawCover = og('image') || doc.querySelector('meta[name="twitter:image"]')?.content||'';
+      if(_isImageUrl(rawCover)) cover = rawCover;
+
+      // Titre de l'album depuis og:title (nettoyer "| Spotify")
+      let rawTitle = og('title') || doc.title||'';
+      rawTitle = rawTitle.replace(/\s*[|]\s*Spotify\s*$/i,'').replace(/\s*[-–—]\s*Spotify\s*$/i,'').replace(/\s+on\s+Spotify\s*$/i,'').trim();
+
+      // JSON-LD
+      let jd={};
+      try{ const s=doc.querySelector('script[type="application/ld+json"]'); if(s) jd=JSON.parse(s.textContent); }catch{}
+      jd = jd['@graph']?.[0]||jd;
+
+      albumName  = jd.name || rawTitle || '';
+      artistName = jd.byArtist?.name || '';
+
+      // Artiste depuis la description si absent du JSON-LD
+      if(!artistName){
+        const desc = og('description')||'';
+        const m = desc.match(/by\s+(.+?)\s+on\s+Spotify/i)
+               || desc.match(/^(.+?)\s*[·•]\s*(?:Album|Single|EP)/i);
+        if(m) artistName = m[1].trim();
+      }
+
+      // Année
+      const yearRaw = jd.datePublished||jd.dateCreated||'';
+      if(yearRaw) year = String(yearRaw).slice(0,4);
+
+      if(albumName) break;
+    }catch{ continue; }
+  }
+
+  const set = (id, val) => { const f=document.getElementById(id); if(f&&val&&!f.value) f.value=val; return !!(f&&val); };
+  const applied = [];
+
+  if(cover)     { document.getElementById('ed-cover').value=cover; _setEdCoverPreview(cover); applied.push('pochette'); }
+  if(albumName) { if(set('ed-album', albumName))  applied.push('album'); }
+  if(artistName){ if(set('ed-artist', artistName)) applied.push('artiste'); }
+  if(year)      { if(set('ed-year', year))         applied.push('année'); }
+
+  // Enrichissement Deezer : genre + pochette de meilleure qualité si manquante
+  const searchAlbum  = albumName  || document.getElementById('ed-album')?.value  || '';
+  const searchArtist = artistName || document.getElementById('ed-artist')?.value || '';
+  if(searchAlbum || searchArtist){
+    toast('🔍 Genre via Deezer…');
+    const dz = await _fetchDeezerAlbumMeta(searchAlbum, searchArtist).catch(()=>null);
+    if(dz){
+      if(!cover && dz.cover){ document.getElementById('ed-cover').value=dz.cover; _setEdCoverPreview(dz.cover); applied.push('pochette'); }
+      if(dz.genre){ if(set('ed-genre', dz.genre)) applied.push('genre'); }
+      if(!year && dz.year){ if(set('ed-year', dz.year)) applied.push('année'); }
+    } else {
+      // Fallback iTunes pour le genre
+      const it = await fetchItunesMeta(searchAlbum, searchArtist).catch(()=>null);
+      if(it){
+        if(!cover && it.cover){ document.getElementById('ed-cover').value=it.cover; _setEdCoverPreview(it.cover); applied.push('pochette'); }
+        if(it.genre){ if(set('ed-genre', it.genre)) applied.push('genre'); }
+      }
+    }
+  }
+
+  if(applied.length) toast('✅ Album Spotify : '+applied.join(', '));
+  else toast('⚠️ Aucune métadonnée trouvée — renseigne manuellement', true);
+}
+
 async function fetchMetaFromUrl(){
   const url = (document.getElementById('ed-meta-url')?.value||'').trim();
   if(!url){ toast('Colle un lien dans le champ d\'abord', true); return; }
@@ -2380,6 +2914,12 @@ async function fetchMetaFromUrl(){
     document.getElementById('ed-cover').value = url;
     _setEdCoverPreview(url);
     toast('✅ Pochette appliquée depuis le lien image');
+    return;
+  }
+
+  // ── Spotify album → chemin dédié ──
+  if(/open\.spotify\.com(?:\/intl-[a-z-]+)?\/album\//i.test(url)){
+    await _handleSpotifyAlbumUrl(url);
     return;
   }
 
@@ -2410,15 +2950,19 @@ async function fetchMetaFromUrl(){
     const meta  = n => doc.querySelector('meta[name="'+n+'"]')?.content || doc.querySelector('meta[property="'+n+'"]')?.content || '';
     const ld    = () => { try{ const s=doc.querySelector('script[type="application/ld+json"]'); return s?JSON.parse(s.textContent):{} }catch{return{}} };
 
-    // JSON-LD (riche sur Spotify, Deezer, Genius, Wikipedia…)
+    // JSON-LD (riche sur Deezer, Genius, Wikipedia…)
     const json = ld();
     const jd   = json['@graph']?.[0] || json;
 
     // Extraire chaque champ avec fallbacks multiples
-    const cover  = og('image') || meta('twitter:image') || jd.image?.url || jd.image || '';
+    // IMPORTANT : valider que la cover est une vraie URL d'image (pas une page web)
+    const rawCover = og('image') || meta('twitter:image') || jd.image?.url || (typeof jd.image==='string'?jd.image:'') || '';
+    const cover  = _isImageUrl(rawCover) ? rawCover : '';
     const title  = og('title') || jd.name || meta('twitter:title') || doc.title || '';
     const artist = jd.byArtist?.name || jd.creator?.name || jd.author?.name || og('music:musician') || meta('music:musician') || '';
-    const album  = jd.inAlbum?.name || jd.partOfAlbum?.name || og('music:album') || meta('music:album') || jd.albumName || '';
+    // Pour une page album : jd.name EST le nom de l'album ; pour une piste : jd.inAlbum.name
+    const isAlbumPage = jd['@type'] === 'MusicAlbum' || (jd['@type'] && String(jd['@type']).includes('MusicAlbum'));
+    const album  = jd.inAlbum?.name || jd.partOfAlbum?.name || og('music:album') || meta('music:album') || jd.albumName || (isAlbumPage ? jd.name : '') || '';
     const yearRaw= jd.datePublished || jd.dateCreated || jd.inAlbum?.datePublished || og('music:release_date') || meta('music:release_date') || '';
     const year   = yearRaw ? String(yearRaw).slice(0,4) : '';
     const genre  = (Array.isArray(jd.genre)?jd.genre[0]:jd.genre) || '';
@@ -2881,15 +3425,26 @@ function _renderPartyUsersList(){
    PARSE FILENAME → metadata
 ═══════════════════════════════════════════ */
 function parseFilename(fn){
-  let name=fn.replace(/\.(mp3|flac|ogg|wav|m4a)$/i,'').replace(/_/g,' ');
-  const parts=name.split(/\s*-\s*/).map(p=>p.trim());
-  let title=name,artist='Inconnu',album='Sans album',year='',genre='';
-  if(parts.length>=3){artist=parts[0];album=parts[1];title=parts.slice(2).join(' - ');}
-  else if(parts.length===2){artist=parts[0];title=parts[1];}
-  else{title=parts[0];}
-  const ym=title.match(/\((\d{4})\)/);
-  if(ym){year=ym[1];title=title.replace(ym[0],'').trim();}
-  return{title,artist,album,year,genre};
+  let name = fn.replace(/\.(mp3|flac|ogg|wav|m4a)$/i,'').replace(/_/g,' ').trim();
+
+  // Retire les numéros de piste en début : "01 - ", "1. ", "01. ", "Track 01 - "
+  name = name.replace(/^(?:track\s*)?(\d{1,3})[\.\-\s]+/i, '');
+
+  let title = name, artist = 'Inconnu', album = 'Sans album', year = '', genre = '';
+
+  const parts = name.split(/\s*-\s*/).map(p => p.trim()).filter(Boolean);
+  if(parts.length >= 3){ artist = parts[0]; album = parts[1]; title = parts.slice(2).join(' - '); }
+  else if(parts.length === 2){ artist = parts[0]; title = parts[1]; }
+  else { title = parts[0] || name; }
+
+  // Extrait l'année entre parenthèses ou crochets : (2003) ou [2003]
+  const ym = title.match(/[\(\[]((?:19|20)\d{2})[\)\]]/);
+  if(ym){ year = ym[1]; title = title.replace(ym[0],'').trim(); }
+
+  // Retire les mentions feat. du titre (nettoyage)
+  title = title.replace(/\s*[\(\[](feat|ft|with|avec)\.?\s[^\)\]]+[\)\]]/i,'').trim();
+
+  return { title, artist, album, year, genre };
 }
 
 /* ═══════════════════════════════════════════
@@ -2953,6 +3508,7 @@ function renderAll(){
   renderFavorites();
   renderHistory();
   renderDashboard();
+  if(typeof renderPlaylists === 'function') renderPlaylists();
 }
 
 /* ─── SONGS ─── */
@@ -2983,6 +3539,7 @@ function renderSongs(){
         <span class="dur-val">${fmtTime(t.length)}</span>
         <div class="tr-actions">
           <button class="ico-btn fav-btn${faved?' active':''}" data-tid="${t.id}" onclick="toggleFavById(${t.id},event)" title="${faved?'Retirer des favoris':'Ajouter aux favoris'}">${faved?'♥':'♡'}</button>
+          <button class="ico-btn" onclick="openAddToPlaylistSheet('${escAttr(t.filename)}',event)" title="Ajouter à une playlist">＋</button>
           <button class="ico-btn edit" onclick="event.stopPropagation();openEditor(${t.id})" title="Éditer">✏️</button>
         </div>
       </div>
@@ -3226,14 +3783,49 @@ function applySort(){
   });
 }
 
+/* ── Normalise une chaîne pour la recherche (retire accents, ponctuation, casse) ── */
+function _normSearch(s){
+  return String(s||'')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')  // accents → base
+    .replace(/[''`]/g,"'");
+}
+
 function onSearch(){
-  const q=document.getElementById('searchInput').value.toLowerCase();
+  const raw = document.getElementById('searchInput').value;
+  const q = _normSearch(raw);
+
   if(q) showViewRaw('songs');
-  filtered=q
-    ? tracks.filter(t=>t.title.toLowerCase().includes(q)||t.artist.toLowerCase().includes(q)||t.album.toLowerCase().includes(q))
-    : [...tracks];
+
+  if(!q){
+    filtered = [...tracks];
+  } else {
+    // Découpe en tokens : chaque mot doit matcher AU MOINS UN champ
+    const tokens = q.split(/\s+/).filter(Boolean);
+    filtered = tracks.filter(t => {
+      const fields = [
+        _normSearch(t.title),
+        _normSearch(t.artist),
+        _normSearch(t.album),
+        _normSearch(t.genre),
+        _normSearch(t.year),
+      ];
+      return tokens.every(tok => fields.some(f => f.includes(tok)));
+    });
+  }
+
   applySort();
   renderSongs();
+
+  // Affiche le compte de résultats dans le sous-titre de la vue
+  const sub = document.getElementById('songCount');
+  if(sub){
+    if(q && filtered.length !== tracks.length){
+      sub.textContent = `${filtered.length} résultat${filtered.length>1?'s':''} pour « ${raw} »`;
+    } else {
+      sub.textContent = `${tracks.length} chanson${tracks.length>1?'s':''}`;
+    }
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -3303,6 +3895,9 @@ async function loadAndPlay(t){
     broadcastTrack(t);
     addToHistory(t);
     recordPlay(t);
+
+    // Fetch paroles LRC en arrière-plan
+    fetchAndShowLrc(t);
 
     await audio.play();
 
@@ -3475,6 +4070,7 @@ function _onTimeUpdate() {
     document.getElementById('fsFill').style.width = pct + '%';
     if (!_316active) document.getElementById('fsElapsed').textContent = fmtTime(cur);
     document.getElementById('fsDur').textContent = fmtTime(dur);
+    if (_lyricsOpen) updateLrcHighlight(cur);
   }
 
   // ── Déclenchement du fondu croisé ──
@@ -4947,6 +5543,216 @@ document.getElementById('wolfPixel').addEventListener('click',()=>{
 </script>
 <script>
 /* ══════════════════════════════════════════════
+   LRC LYRICS — LRCLIB.NET
+══════════════════════════════════════════════ */
+
+function _getLrcCache(){ try{ return JSON.parse(localStorage.getItem(LRC_STORE)||'{}'); }catch{ return {}; } }
+function _saveLrcCache(c){
+  const keys = Object.keys(c);
+  if(keys.length > 250){ keys.slice(0, keys.length-250).forEach(k => delete c[k]); }
+  localStorage.setItem(LRC_STORE, JSON.stringify(c));
+}
+function _lrcKey(t){ return (String(t.artist||'')+'|'+String(t.title||'')).toLowerCase().trim(); }
+
+async function fetchAndShowLrc(t){
+  // Reset panel
+  _lrcLines = []; _lrcPlain = ''; _lrcActiveIdx = -1;
+  _renderLrcPanel(true); // show loading state
+
+  const key = _lrcKey(t);
+  const cache = _getLrcCache();
+
+  if(cache[key]){
+    if(cache[key].noLyrics){ _renderLrcPanel(); return; }
+    _lrcLines = cache[key].lines || [];
+    _lrcPlain = cache[key].plain || '';
+    _renderLrcPanel();
+    if(_lyricsOpen){ _lrcActiveIdx=-1; updateLrcHighlight(_activeAudio().currentTime); }
+    return;
+  }
+
+  // ── Appel LRCLIB ──
+  try{
+    const p = new URLSearchParams({ artist_name: t.artist||'', track_name: t.title||'' });
+    if(t.album && t.album !== 'Sans album') p.set('album_name', t.album);
+    // ⚠️ On n'envoie PAS la duration : elle diffère souvent entre le stream et lrclib → 404 inutile
+
+    let lines = [], plain = '';
+
+    // Tentative 1 : /api/get (exact match)
+    const res = await fetch('https://lrclib.net/api/get?'+p, { signal: AbortSignal.timeout(8000) });
+
+    if(res.ok){
+      const data = await res.json();
+      if(data.instrumental){
+        cache[key] = { noLyrics: true };
+        _saveLrcCache(cache);
+        _lrcPlain = '🎹 Instrumental';
+        _renderLrcPanel();
+        return;
+      }
+      lines = data.syncedLyrics ? _parseLrc(data.syncedLyrics) : [];
+      plain = data.plainLyrics || '';
+    }
+
+    // Tentative 2 : /api/search lrclib si pas de résultat
+    if(!lines.length && !plain){
+      const q = encodeURIComponent(((t.artist||'')+' '+(t.title||'')).trim());
+      const res2 = await fetch('https://lrclib.net/api/search?q='+q, { signal: AbortSignal.timeout(8000) });
+      if(res2.ok){
+        const arr = await res2.json();
+        const hit = Array.isArray(arr) && arr[0];
+        if(hit){
+          if(hit.instrumental){
+            _lrcPlain = '🎹 Instrumental';
+          } else {
+            lines = hit.syncedLyrics ? _parseLrc(hit.syncedLyrics) : [];
+            plain = hit.plainLyrics || '';
+          }
+        }
+      }
+    }
+
+    // Tentative 3 : lyrics.ovh (agrège Genius + autres sources)
+    if(!lines.length && !plain && !_lrcPlain){
+      try{
+        const artist = encodeURIComponent(t.artist||'');
+        const title  = encodeURIComponent(t.title||'');
+        const res3 = await fetch(`https://api.lyrics.ovh/v1/${artist}/${title}`, { signal: AbortSignal.timeout(8000) });
+        if(res3.ok){
+          const d = await res3.json();
+          if(d.lyrics && d.lyrics.trim()) plain = d.lyrics.trim();
+        }
+      }catch(e3){ console.warn('[Arya LRC] lyrics.ovh', e3); }
+    }
+
+    if(!lines.length && !plain && !_lrcPlain){
+      cache[key] = { noLyrics: true };
+      _saveLrcCache(cache);
+      _renderLrcPanel();
+      return;
+    }
+
+    cache[key] = { lines, plain };
+    _saveLrcCache(cache);
+
+    _lrcLines = lines;
+    _lrcPlain = plain || _lrcPlain;
+    _renderLrcPanel();
+    if(_lyricsOpen){ _lrcActiveIdx=-1; updateLrcHighlight(_activeAudio().currentTime); }
+
+  }catch(e){
+    // Erreur réseau : on NE cache PAS noLyrics (on réessaiera la prochaine fois)
+    console.warn('[Arya LRC]', e);
+    _renderLrcPanel();
+  }
+}
+
+function _parseLrc(text){
+  const lines = [];
+  const re = /\[(\d{1,2}):(\d{2})\.(\d{2,3})\](.*)/g;
+  let m;
+  while((m = re.exec(text)) !== null){
+    const time = parseInt(m[1])*60 + parseInt(m[2]) + (m[3].length===2 ? parseInt(m[3])/100 : parseInt(m[3])/1000);
+    const txt = m[4].trim();
+    if(txt) lines.push({ time, text: txt });
+  }
+  return lines.sort((a,b) => a.time-b.time);
+}
+
+function _renderLrcPanel(loading=false){
+  const panel = document.getElementById('fsLyricsPanel');
+  if(!panel) return;
+
+  const closeBtn  = `<button class="lrc-close-btn" onclick="toggleLyricsPanel()" title="Fermer les paroles">✕</button>`;
+  const refreshBtn = `<button class="lrc-refresh-btn" id="lrcRefreshBtn" onclick="refreshLrc()" title="Rafraîchir les paroles">↺ Rafraîchir</button>`;
+
+  if(loading){
+    panel.innerHTML = closeBtn + '<div class="lrc-loading">♪ Recherche des paroles…</div>';
+    return;
+  }
+
+  if(_lrcLines.length){
+    panel.innerHTML = closeBtn + _lrcLines.map((l,i) =>
+      `<div class="lrc-line" id="lrc-${i}" onclick="fsSeekToLrc(${i})">${esc(l.text)}</div>`
+    ).join('') + refreshBtn;
+    return;
+  }
+
+  if(_lrcPlain){
+    panel.innerHTML = closeBtn + `<div class="lrc-plain">${esc(_lrcPlain)}</div>` + refreshBtn;
+    return;
+  }
+
+  panel.innerHTML = closeBtn + '<div class="lrc-empty">Paroles introuvables pour ce titre<br><span style="font-size:11px;color:var(--text3);">Sources : LRCLIB · Lyrics.ovh (Genius)</span></div>' + refreshBtn;
+}
+
+function updateLrcHighlight(cur){
+  if(!_lrcLines.length) return;
+  const panel = document.getElementById('fsLyricsPanel');
+  if(!panel) return;
+
+  let idx = -1;
+  for(let i=0; i<_lrcLines.length; i++){
+    if(_lrcLines[i].time <= cur) idx = i;
+    else break;
+  }
+
+  if(idx === _lrcActiveIdx) return;
+  _lrcActiveIdx = idx;
+
+  panel.querySelectorAll('.lrc-line').forEach((el,i) => {
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('near',   i === idx+1 || i === idx-1);
+  });
+
+  if(idx >= 0){
+    const el = document.getElementById('lrc-'+idx);
+    if(el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+}
+
+function toggleLyricsPanel(){
+  _lyricsOpen = !_lyricsOpen;
+  const panel = document.getElementById('fsLyricsPanel');
+  const btn   = document.getElementById('fsLyricsBtn');
+  if(panel) panel.classList.toggle('open', _lyricsOpen);
+  if(btn)   btn.classList.toggle('on', _lyricsOpen);
+  if(_lyricsOpen){
+    _lrcActiveIdx = -1;
+    updateLrcHighlight(_activeAudio().currentTime);
+  }
+}
+
+function fsSeekToLrc(idx){
+  if(!_lrcLines[idx]) return;
+  const aa = _activeAudio();
+  if(aa) aa.currentTime = _lrcLines[idx].time;
+}
+
+async function refreshLrc(){
+  if(currentId === null) return;
+  const t = tracks.find(x => x.id === currentId);
+  if(!t) return;
+
+  // Animer le bouton
+  const btn = document.getElementById('lrcRefreshBtn');
+  if(btn){ btn.classList.add('spinning'); btn.style.pointerEvents='none'; }
+
+  // Vider le cache pour cette chanson
+  const key = _lrcKey(t);
+  const cache = _getLrcCache();
+  delete cache[key];
+  _saveLrcCache(cache);
+
+  // Re-fetch
+  await fetchAndShowLrc(t);
+
+  if(btn){ btn.classList.remove('spinning'); btn.style.pointerEvents=''; }
+  toast('↺ Paroles rechargées');
+}
+
+/* ══════════════════════════════════════════════
    FULL-SCREEN PLAYER
 ══════════════════════════════════════════════ */
 // _fsOpen est déclaré dans le bloc STATE principal
@@ -5056,7 +5862,7 @@ function setVolFs(v){
 /* ══════════════════════════════════════════════
    MORE BOTTOM SHEET
 ══════════════════════════════════════════════ */
-const MORE_VIEWS = ['stats','party','history','online','editor','upload'];
+const MORE_VIEWS = ['stats','party','history','online','editor','upload','playlists','data'];
 
 function openMoreSheet(){
   document.getElementById('moreBackdrop').classList.add('open');
@@ -5080,6 +5886,11 @@ function closeMoreSheet(){
 
 /* ── Bouton retour physique (Android / PWA) ── */
 window.addEventListener('popstate', function(e){
+  if(document.getElementById('plSheet')?.classList.contains('open')){
+    document.getElementById('plSheetBackdrop').classList.remove('open');
+    document.getElementById('plSheet').classList.remove('open');
+    return;
+  }
   if(document.getElementById('itunesSheet')?.classList.contains('open')){
     document.getElementById('itunesBackdrop').classList.remove('open');
     document.getElementById('itunesSheet').classList.remove('open');
@@ -5116,6 +5927,8 @@ function showViewFromMore(name){
 const _origShowView = showView;
 window.showView = function(name){
   _origShowView(name);
+  if(name === 'playlists') renderPlaylists();
+  if(name === 'data') {} // static view
   // If navigating to a main nav view, deactivate More button
   const mainViews = ['dashboard','songs','favorites','albums','artists'];
   const mnMore = document.getElementById('mnMoreBtn');
@@ -5167,6 +5980,333 @@ document.querySelectorAll('.nav-item').forEach(el =>
     if(window.innerWidth <= 640) closeSidebarDrawer();
   })
 );
+
+/* ══════════════════════════════════════════════
+   PLAYLISTS
+══════════════════════════════════════════════ */
+const PLAYLIST_STORE = 'arya_playlists_v1';
+
+function getPlaylists(){ try{ return JSON.parse(localStorage.getItem(PLAYLIST_STORE)||'{}'); }catch{ return {}; } }
+function savePlaylists(pls){ localStorage.setItem(PLAYLIST_STORE, JSON.stringify(pls)); }
+
+function createPlaylist(name){
+  const pls = getPlaylists();
+  const id = 'pl_' + Date.now();
+  pls[id] = { id, name: name.trim(), tracks: [], created: Date.now() };
+  savePlaylists(pls);
+  return id;
+}
+
+function deletePlaylist(id){
+  const pls = getPlaylists();
+  delete pls[id];
+  savePlaylists(pls);
+}
+
+function addToPlaylist(plId, filename){
+  const pls = getPlaylists();
+  if(!pls[plId]) return;
+  if(!pls[plId].tracks.includes(filename)) pls[plId].tracks.push(filename);
+  savePlaylists(pls);
+}
+
+function removeFromPlaylist(plId, filename){
+  const pls = getPlaylists();
+  if(!pls[plId]) return;
+  pls[plId].tracks = pls[plId].tracks.filter(f => f !== filename);
+  savePlaylists(pls);
+}
+
+function promptCreatePlaylist(){
+  const name = prompt('Nom de la playlist :');
+  if(!name || !name.trim()) return;
+  createPlaylist(name.trim());
+  renderPlaylists();
+  toast('✅ Playlist "' + name.trim() + '" créée');
+}
+
+function renderPlaylists(){
+  const pls = getPlaylists();
+  const entries = Object.values(pls).sort((a,b) => b.created - a.created);
+  const badge = document.getElementById('plBadge');
+  const countEl = document.getElementById('plCount');
+  if(badge){ badge.style.display = entries.length ? '' : 'none'; badge.textContent = entries.length; }
+  if(countEl) countEl.textContent = entries.length + ' playlist' + (entries.length !== 1 ? 's' : '');
+  const list = document.getElementById('playlistList');
+  if(!list) return;
+  if(!entries.length){
+    list.innerHTML = '<div style="color:var(--text2);padding:60px;text-align:center;line-height:2;">📋<br>Aucune playlist<br><small style="color:var(--text3);">Créez votre première playlist ci-dessus</small></div>';
+    return;
+  }
+  list.innerHTML = entries.map(pl => {
+    const count = pl.tracks.length;
+    const firstTrack = pl.tracks.map(fn => tracks.find(t => t.filename === fn)).find(Boolean);
+    const cover = firstTrack ? getCover(firstTrack.filename) : null;
+    const grad = firstTrack ? gradFor(firstTrack.artist + firstTrack.album) : 'linear-gradient(135deg,var(--accent),var(--rose))';
+    return '<div class="playlist-card" onclick="openPlaylistDetail(\'' + pl.id + '\')">'
+      + '<div class="playlist-card-art" style="' + (cover ? '' : 'background:' + grad) + '">'
+      + (cover ? '<img src="' + esc(cover) + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" onerror="this.parentElement.style.background=\'' + grad + '\';this.remove();">' : '🎵')
+      + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div class="playlist-card-name">' + esc(pl.name) + '</div>'
+      + '<div class="playlist-card-sub">' + count + ' chanson' + (count !== 1 ? 's' : '') + '</div>'
+      + '</div>'
+      + '<button class="playlist-del-btn" onclick="event.stopPropagation();confirmDeletePlaylist(\'' + pl.id + '\',\'' + escAttr(pl.name) + '\')" title="Supprimer">🗑</button>'
+      + '</div>';
+  }).join('');
+}
+
+let _plDetailId = null;
+
+function openPlaylistDetail(id){
+  const pls = getPlaylists();
+  const pl = pls[id];
+  if(!pl) return;
+  _plDetailId = id;
+  const plTracks = pl.tracks.map(fn => tracks.find(t => t.filename === fn)).filter(Boolean);
+  detailTracks = plTracks;
+  prevView = 'playlists';
+
+  document.getElementById('detailType').textContent = 'Playlist';
+  document.getElementById('detailName').textContent = pl.name;
+  document.getElementById('detailSub').textContent = plTracks.length + ' chanson' + (plTracks.length !== 1 ? 's' : '');
+  const heroArt = document.getElementById('detailArt');
+  heroArt.style.borderRadius = '12px';
+  const firstCover = plTracks.map(t => getCover(t.filename)).find(Boolean);
+  const grad = gradFor(pl.name);
+  heroArt.style.background = firstCover ? '' : grad;
+  heroArt.innerHTML = firstCover
+    ? '<img src="' + esc(firstCover) + '" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" onerror="this.parentElement.style.background=\'' + grad + '\';this.remove();">'
+    : '🎵';
+
+  document.getElementById('detailList').innerHTML = plTracks.map((t, i) => {
+    const faved = getFavs().has(t.filename);
+    return '<div class="track-row detail-track-row' + (currentId === t.id ? ' playing' : '') + '" data-id="' + t.id + '" onclick="playDetailTrack(' + i + ')">'
+      + '<div class="tr-num">' + (i+1) + '</div>'
+      + '<div class="playing-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>'
+      + artDivHtml(t)
+      + '<div class="tr-info"><div class="tr-title">' + esc(t.title) + '</div><div class="tr-artist-s">' + esc(t.artist) + '</div></div>'
+      + '<div class="tr-artist">' + esc(t.artist) + '</div>'
+      + '<div class="tr-dur"><span class="dur-val">' + fmtTime(t.length) + '</span>'
+      + '<div class="tr-actions">'
+      + '<button class="ico-btn fav-btn' + (faved ? ' active' : '') + '" data-tid="' + t.id + '" onclick="toggleFavById(' + t.id + ',event)" title="' + (faved ? 'Retirer' : 'Ajouter') + '">' + (faved ? '♥' : '♡') + '</button>'
+      + '<button class="ico-btn" onclick="event.stopPropagation();removePlTrackAndRefresh(\'' + id + '\',\'' + escAttr(t.filename) + '\')" title="Retirer de la playlist" style="color:var(--rose);font-size:16px;">✕</button>'
+      + '</div></div></div>';
+  }).join('');
+
+  showViewRaw('detail');
+}
+
+function removePlTrackAndRefresh(plId, filename){
+  removeFromPlaylist(plId, filename);
+  openPlaylistDetail(plId);
+  toast('🗑 Retiré de la playlist');
+}
+
+function confirmDeletePlaylist(id, name){
+  if(confirm('Supprimer la playlist "' + name + '" ?')){
+    deletePlaylist(id);
+    renderPlaylists();
+    toast('🗑 Playlist supprimée');
+  }
+}
+
+/* ── Add-to-playlist sheet ── */
+let _plSheetFilename = null;
+
+function openAddToPlaylistSheet(filename, e){
+  if(e) e.stopPropagation();
+  _plSheetFilename = filename;
+  _renderPlSheetList();
+  document.getElementById('plSheetBackdrop').classList.add('open');
+  document.getElementById('plSheet').classList.add('open');
+  history.pushState({ arya: 'plSheet' }, '');
+}
+
+function closePlSheet(){
+  const was = document.getElementById('plSheet').classList.contains('open');
+  document.getElementById('plSheetBackdrop').classList.remove('open');
+  document.getElementById('plSheet').classList.remove('open');
+  if(was && history.state?.arya === 'plSheet') history.back();
+}
+
+function _renderPlSheetList(){
+  const pls = getPlaylists();
+  const entries = Object.values(pls).sort((a,b) => b.created - a.created);
+  const list = document.getElementById('plSheetList');
+  list.innerHTML = '<div class="pl-new-input-row">'
+    + '<input class="form-input" id="plNewInput" placeholder="Nouvelle playlist…" style="flex:1;font-size:13.5px;" onkeydown="if(event.key===\'Enter\')plSheetCreateAndAdd()">'
+    + '<button class="btn btn-acc" style="font-size:13px;padding:8px 14px;" onclick="plSheetCreateAndAdd()">＋ Créer</button>'
+    + '</div>'
+    + (entries.length
+      ? entries.map(pl => {
+          const already = pl.tracks.includes(_plSheetFilename);
+          return '<div class="pl-sheet-item" onclick="plSheetAddTo(\'' + pl.id + '\')">'
+            + '<div class="pl-sheet-item-ico">' + (already ? '✅' : '🎵') + '</div>'
+            + '<div><div class="pl-sheet-item-name">' + esc(pl.name) + '</div>'
+            + '<div class="pl-sheet-item-sub">' + pl.tracks.length + ' chanson' + (pl.tracks.length !== 1 ? 's' : '') + (already ? ' · déjà ajouté' : '') + '</div></div>'
+            + '</div>';
+        }).join('')
+      : '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0;">Aucune playlist — créez-en une ci-dessus</div>');
+}
+
+function plSheetAddTo(plId){
+  if(!_plSheetFilename) return;
+  addToPlaylist(plId, _plSheetFilename);
+  const pl = getPlaylists()[plId];
+  toast('✅ Ajouté à "' + (pl?.name || 'playlist') + '"');
+  _renderPlSheetList();
+}
+
+function plSheetCreateAndAdd(){
+  const input = document.getElementById('plNewInput');
+  const name = input?.value?.trim();
+  if(!name){ toast('⚠️ Donnez un nom à la playlist', true); return; }
+  const id = createPlaylist(name);
+  if(_plSheetFilename) addToPlaylist(id, _plSheetFilename);
+  toast('✅ Playlist "' + name + '" créée');
+  closePlSheet();
+  renderPlaylists();
+}
+
+/* ══════════════════════════════════════════════
+   APPLY META — réapplique les métadonnées sauvegardées
+   aux objets track en mémoire (utilisé après import/clear)
+══════════════════════════════════════════════ */
+function applyMeta(){
+  const meta = getMeta();
+  tracks.forEach(t => {
+    const s = meta[t.filename];
+    if(!s) return;
+    if(s.title)     t.title     = s.title;
+    if(s.artist)    t.artist    = s.artist;
+    if(s.album)     t.album     = s.album;
+    if(s.year)      t.year      = s.year;
+    if(s.genre)     t.genre     = s.genre;
+    if(s.cover)     {} // géré via getCover()
+    if(s.deezerUrl) t.deezerUrl = s.deezerUrl;
+    else            delete t.deezerUrl;
+  });
+  filtered = [...tracks];
+}
+
+/* ══════════════════════════════════════════════
+   IMPORT / EXPORT DE DONNÉES
+══════════════════════════════════════════════ */
+function exportData(){
+  const data = {
+    version: 1,
+    exported: new Date().toISOString(),
+    appName: 'Arya',
+    meta:        JSON.parse(localStorage.getItem(META_STORE)        || '{}'),
+    favs:        JSON.parse(localStorage.getItem(FAV_STORE)         || '[]'),
+    history:     JSON.parse(localStorage.getItem(HIST_STORE)        || '[]'),
+    stats:       JSON.parse(localStorage.getItem(STATS_STORE)       || '{}'),
+    playlists:   JSON.parse(localStorage.getItem(PLAYLIST_STORE)    || '{}'),
+    artistImgs:  JSON.parse(localStorage.getItem(ARTIST_IMG_STORE)  || '{}'),
+    lrcCache:    JSON.parse(localStorage.getItem(LRC_STORE)          || '{}'),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'arya-export-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ Export téléchargé');
+}
+
+function importData(mode){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json,.json';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if(!data.version || data.appName !== 'Arya') throw new Error('Format invalide');
+
+      if(mode === 'replace'){
+        if(!confirm('⚠️ Remplacer TOUTES vos données locales par cet export ? Action irréversible.')) return;
+        localStorage.setItem(META_STORE,       JSON.stringify(data.meta       || {}));
+        localStorage.setItem(FAV_STORE,        JSON.stringify(data.favs       || []));
+        localStorage.setItem(HIST_STORE,       JSON.stringify(data.history    || []));
+        localStorage.setItem(STATS_STORE,      JSON.stringify(data.stats      || {}));
+        localStorage.setItem(PLAYLIST_STORE,   JSON.stringify(data.playlists  || {}));
+        if(data.artistImgs) localStorage.setItem(ARTIST_IMG_STORE, JSON.stringify(data.artistImgs));
+      } else {
+        // Merge
+        if(data.meta){
+          const cur = JSON.parse(localStorage.getItem(META_STORE)||'{}');
+          localStorage.setItem(META_STORE, JSON.stringify({...cur, ...data.meta}));
+        }
+        if(data.favs){
+          const cur = new Set(JSON.parse(localStorage.getItem(FAV_STORE)||'[]'));
+          (data.favs||[]).forEach(f => cur.add(f));
+          localStorage.setItem(FAV_STORE, JSON.stringify([...cur]));
+        }
+        if(data.history){
+          const cur = JSON.parse(localStorage.getItem(HIST_STORE)||'[]');
+          const merged = [...(data.history||[]), ...cur];
+          const seen = new Set();
+          const deduped = merged.filter(h => { const k = h.filename + h.ts; if(seen.has(k)) return false; seen.add(k); return true; });
+          localStorage.setItem(HIST_STORE, JSON.stringify(deduped.slice(0, MAX_HIST)));
+        }
+        if(data.stats){
+          const cur = JSON.parse(localStorage.getItem(STATS_STORE)||'{}');
+          const merged = {...cur};
+          Object.entries(data.stats||{}).forEach(([k, v]) => {
+            if(merged[k]){ merged[k].plays = (merged[k].plays||0)+(v.plays||0); merged[k].seconds = (merged[k].seconds||0)+(v.seconds||0); }
+            else { merged[k] = v; }
+          });
+          localStorage.setItem(STATS_STORE, JSON.stringify(merged));
+        }
+        if(data.playlists){
+          const cur = JSON.parse(localStorage.getItem(PLAYLIST_STORE)||'{}');
+          localStorage.setItem(PLAYLIST_STORE, JSON.stringify({...cur, ...data.playlists}));
+        }
+        if(data.artistImgs){
+          const cur = JSON.parse(localStorage.getItem(ARTIST_IMG_STORE)||'{}');
+          localStorage.setItem(ARTIST_IMG_STORE, JSON.stringify({...cur, ...data.artistImgs}));
+        }
+      }
+
+      applyMeta();
+      filtered = [...tracks];
+      applySort();
+      renderSongs();
+      renderAlbums();
+      renderArtists();
+      renderFavorites();
+      renderHistory();
+      renderPlaylists();
+      updateFavBadge();
+      toast('✅ Données importées avec succès');
+    }catch(err){
+      console.error('[Arya import]', err);
+      toast('⚠️ Fichier invalide ou non reconnu', true);
+    }
+  };
+  input.click();
+}
+
+function clearAllData(){
+  if(!confirm('⚠️ Effacer TOUTES les données locales (méta, favoris, historique, stats, playlists) ?\n\nAction irréversible.')) return;
+  [META_STORE, FAV_STORE, HIST_STORE, STATS_STORE, PLAYLIST_STORE, ARTIST_IMG_STORE, LRC_STORE].forEach(k => localStorage.removeItem(k));
+  filtered = [...tracks];
+  applyMeta();
+  applySort();
+  renderSongs();
+  renderAlbums();
+  renderArtists();
+  renderFavorites();
+  renderHistory();
+  renderPlaylists();
+  updateFavBadge();
+  toast('🗑 Données effacées');
+}
 </script>
 <!-- Backdrop sidebar drawer mobile -->
 <div id="sidebarBackdrop" onclick="closeSidebarDrawer()"></div>
