@@ -1280,6 +1280,52 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
 }
 .fs-lyrics-btn:active{color:rgba(255,255,255,.7);}
 .fs-lyrics-btn.on{color:var(--accent);}
+/* ══════════════ TRACK PICKER SHEET ══════════════ */
+.tp-backdrop{
+  position:fixed;inset:0;z-index:210;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(5px);
+  opacity:0;pointer-events:none;transition:opacity .22s;
+}
+.tp-backdrop.open{opacity:1;pointer-events:auto;}
+.tp-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:211;
+  background:var(--bg2);border-top:1px solid var(--border);
+  border-radius:18px 18px 0 0;
+  height:82vh;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1,.23,1);
+}
+.tp-sheet.open{transform:translateY(0);}
+.tp-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:10px auto 0;flex-shrink:0;}
+.tp-header{padding:12px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.tp-header-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.tp-title{font-size:13.5px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tp-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0;flex-shrink:0;}
+.tp-search{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:9px 14px;color:var(--text);
+  font-family:'Outfit',sans-serif;font-size:13.5px;outline:none;transition:border-color .2s;
+}
+.tp-search:focus{border-color:var(--accent);}
+.tp-search::placeholder{color:var(--text3);}
+.tp-count{font-size:11px;color:var(--text3);margin-top:7px;}
+.tp-list{overflow-y:auto;flex:1;padding:8px 12px 40px;display:flex;flex-direction:column;gap:2px;}
+.tp-row{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:8px;cursor:pointer;transition:background .12s;user-select:none;
+}
+.tp-row:hover{background:var(--surface);}
+.tp-row.in-pl{background:var(--accent-glow);}
+.tp-row-art{
+  width:38px;height:38px;border-radius:7px;
+  background:var(--surface);display:flex;align-items:center;
+  justify-content:center;font-size:14px;flex-shrink:0;overflow:hidden;
+}
+.tp-row-art img{width:100%;height:100%;object-fit:cover;border-radius:7px;display:block;}
+.tp-row-info{flex:1;min-width:0;}
+.tp-row-title{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tp-row-sub{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.tp-row-check{font-size:18px;flex-shrink:0;width:28px;text-align:center;line-height:1;}
+
 /* ── EASTER EGGS ── pas aujourd'hui ── */
 @keyframes knifeSlash{
   0%{left:-80px;opacity:1;transform:translateY(-50%) scaleX(-1);}
@@ -1410,6 +1456,10 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
     <div class="view-header">
       <div class="view-title">Toutes les chansons</div>
       <div class="view-sub" id="songCount">Chargement…</div>
+      <div class="detail-acts" style="margin-top:14px;">
+        <button class="btn btn-acc" onclick="playAllSongs()">▶ Tout lire</button>
+        <button class="btn btn-ghost" onclick="shuffleAllSongs()">⇄ Aléatoire</button>
+      </div>
     </div>
     <div class="sort-pills">
       <button class="sort-pill active" data-field="title" onclick="sortBy('title',this)">Titre <span class="pill-dir">↑</span></button>
@@ -1458,6 +1508,7 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
         <div class="detail-acts">
           <button class="btn btn-acc" onclick="playDetailAll()">▶ Tout lire</button>
           <button class="btn btn-ghost" onclick="shuffleDetailAll()">⇄ Aléatoire</button>
+          <button class="btn btn-ghost" id="detailAddBtn" style="display:none;" onclick="openTrackPicker(_plDetailId)">＋ Ajouter</button>
         </div>
       </div>
     </div>
@@ -1472,6 +1523,10 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
     <div class="view-header">
       <div class="view-title">❤️ Favoris</div>
       <div class="view-sub" id="favCount">—</div>
+      <div class="detail-acts" style="margin-top:14px;" id="favPlayActs" style="display:none;">
+        <button class="btn btn-acc" onclick="playAllFavs()">▶ Tout lire</button>
+        <button class="btn btn-ghost" onclick="shuffleAllFavs()">⇄ Aléatoire</button>
+      </div>
     </div>
     <div class="col-heads">
       <div>#</div><div></div>
@@ -1870,6 +1925,20 @@ button, [onclick]{ -webkit-tap-highlight-color:transparent; }
     <button class="pl-sheet-close" onclick="closePlSheet()">✕</button>
   </div>
   <div class="pl-sheet-list" id="plSheetList"></div>
+</div>
+<!-- TRACK PICKER SHEET -->
+<div class="tp-backdrop" id="tpBackdrop" onclick="closeTrackPicker()"></div>
+<div class="tp-sheet" id="tpSheet">
+  <div class="tp-handle"></div>
+  <div class="tp-header">
+    <div class="tp-header-row">
+      <span class="tp-title" id="tpTitle">➕ Ajouter des titres</span>
+      <button class="tp-close" onclick="closeTrackPicker()">✕</button>
+    </div>
+    <input class="tp-search" id="tpSearch" placeholder="Chercher un titre, artiste…" oninput="_renderTrackPicker()">
+    <div class="tp-count" id="tpCount"></div>
+  </div>
+  <div class="tp-list" id="tpList"></div>
 </div>
 <div class="fs-player" id="fsPlayer">
 
@@ -3651,6 +3720,10 @@ function showDetailFromEl(el){
 /* ─── DETAIL ─── */
 function showDetail(type,name){
   prevView=document.querySelector('.nav-item.active')?.dataset?.view||'songs';
+  _plDetailId = null;
+  // Cache le bouton "Ajouter" (réservé aux playlists)
+  const addBtn = document.getElementById('detailAddBtn');
+  if(addBtn) addBtn.style.display = 'none';
   const filtered2=type==='album'
     ? tracks.filter(t=>t.album===name)
     : tracks.filter(t=>t.artist===name);
@@ -3713,6 +3786,11 @@ function goBack(){ showView(prevView); }
 function playDetailAll(){ if(!detailTracks.length) return; queue=[...detailTracks]; queueIdx=0; playFromQueue(); }
 function shuffleDetailAll(){ if(!detailTracks.length) return; queue=shuffleArr([...detailTracks]); queueIdx=0; playFromQueue(); }
 function playDetailTrack(i){ queue=[...detailTracks]; queueIdx=i; playFromQueue(); }
+
+function playAllSongs(){ if(!filtered.length) return; queue=[...filtered]; queueIdx=0; playFromQueue(); }
+function shuffleAllSongs(){ if(!filtered.length) return; queue=shuffleArr([...filtered]); queueIdx=0; playFromQueue(); }
+function playAllFavs(){ const favs=getFavs(); const ft=tracks.filter(t=>favs.has(t.filename)); if(!ft.length) return; queue=[...ft]; queueIdx=0; playFromQueue(); }
+function shuffleAllFavs(){ const favs=getFavs(); const ft=tracks.filter(t=>favs.has(t.filename)); if(!ft.length) return; queue=shuffleArr([...ft]); queueIdx=0; playFromQueue(); }
 
 /* ─── EDITOR LIST ─── */
 function renderEdList(){
@@ -6097,6 +6175,11 @@ function closeMoreSheet(){
 
 /* ── Bouton retour physique (Android / PWA) ── */
 window.addEventListener('popstate', function(e){
+  if(document.getElementById('tpSheet')?.classList.contains('open')){
+    document.getElementById('tpBackdrop').classList.remove('open');
+    document.getElementById('tpSheet').classList.remove('open');
+    return;
+  }
   if(document.getElementById('plSheet')?.classList.contains('open')){
     document.getElementById('plSheetBackdrop').classList.remove('open');
     document.getElementById('plSheet').classList.remove('open');
@@ -6281,6 +6364,9 @@ function openPlaylistDetail(id){
   document.getElementById('detailType').textContent = 'Playlist';
   document.getElementById('detailName').textContent = pl.name;
   document.getElementById('detailSub').textContent = plTracks.length + ' chanson' + (plTracks.length !== 1 ? 's' : '');
+  // Affiche le bouton "Ajouter des titres" uniquement pour les playlists
+  const addBtn = document.getElementById('detailAddBtn');
+  if(addBtn) addBtn.style.display = '';
   const heroArt = document.getElementById('detailArt');
   heroArt.style.borderRadius = '12px';
   const firstCover = plTracks.map(t => getCover(t.filename)).find(Boolean);
@@ -6319,6 +6405,99 @@ function confirmDeletePlaylist(id, name){
     deletePlaylist(id);
     renderPlaylists();
     toast('🗑 Playlist supprimée');
+  }
+}
+
+/* ── Track Picker — ajouter/retirer des titres depuis le détail d'une playlist ── */
+let _tpPlId = null;
+
+function openTrackPicker(plId){
+  if(!plId) return;
+  _tpPlId = plId;
+  const pl = getPlaylists()[plId];
+  if(!pl) return;
+  document.getElementById('tpTitle').textContent = '➕ ' + pl.name;
+  document.getElementById('tpSearch').value = '';
+  _renderTrackPicker();
+  document.getElementById('tpBackdrop').classList.add('open');
+  document.getElementById('tpSheet').classList.add('open');
+  history.pushState({ arya: 'tpSheet' }, '');
+  setTimeout(() => document.getElementById('tpSearch')?.focus(), 350);
+}
+
+function closeTrackPicker(){
+  const was = document.getElementById('tpSheet').classList.contains('open');
+  document.getElementById('tpBackdrop').classList.remove('open');
+  document.getElementById('tpSheet').classList.remove('open');
+  if(was && history.state?.arya === 'tpSheet') history.back();
+  // Rafraîchit le détail de la playlist pour refléter les changements
+  if(_plDetailId) openPlaylistDetail(_plDetailId);
+}
+
+function _renderTrackPicker(){
+  const pl = getPlaylists()[_tpPlId];
+  if(!pl) return;
+  const inPl = new Set(pl.tracks);
+  const raw = document.getElementById('tpSearch')?.value || '';
+  const q = _normSearch(raw);
+
+  let list = [...tracks];
+  if(q){
+    const tokens = q.split(/\s+/).filter(Boolean);
+    list = list.filter(t => {
+      const fields = [_normSearch(t.title), _normSearch(t.artist), _normSearch(t.album)];
+      return tokens.every(tok => fields.some(f => f.includes(tok)));
+    });
+  }
+
+  // Titres déjà dans la playlist en premier, puis alpha
+  list.sort((a, b) => {
+    const aIn = inPl.has(a.filename) ? 0 : 1;
+    const bIn = inPl.has(b.filename) ? 0 : 1;
+    if(aIn !== bIn) return aIn - bIn;
+    return a.title.localeCompare(b.title);
+  });
+
+  const inCount = pl.tracks.length;
+  const countEl = document.getElementById('tpCount');
+  if(countEl) countEl.textContent =
+    inCount + ' titre' + (inCount !== 1 ? 's' : '') + ' dans la playlist'
+    + (list.length !== tracks.length ? ' · ' + list.length + ' résultat' + (list.length !== 1 ? 's' : '') : '');
+
+  document.getElementById('tpList').innerHTML = list.map(t => {
+    const has = inPl.has(t.filename);
+    const cover = getCover(t.filename);
+    const grad = gradFor(t.artist + t.album);
+    return '<div class="tp-row' + (has ? ' in-pl' : '') + '" onclick="toggleTrackInPicker(\'' + escAttr(t.filename) + '\')">'
+      + '<div class="tp-row-art" style="' + (cover ? '' : 'background:' + grad) + '">'
+      + (cover ? '<img src="' + esc(cover) + '" loading="lazy" onerror="this.parentElement.style.background=\'' + grad + '\';this.remove();">' : '🎵')
+      + '</div>'
+      + '<div class="tp-row-info">'
+      + '<div class="tp-row-title">' + esc(t.title) + '</div>'
+      + '<div class="tp-row-sub">' + esc(t.artist) + '</div>'
+      + '</div>'
+      + '<div class="tp-row-check">' + (has ? '✅' : '<span style="color:var(--accent);font-size:17px;font-weight:700;">＋</span>') + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function toggleTrackInPicker(filename){
+  if(!_tpPlId) return;
+  const pl = getPlaylists()[_tpPlId];
+  if(!pl) return;
+  if(pl.tracks.includes(filename)){
+    removeFromPlaylist(_tpPlId, filename);
+    toast('🗑 Retiré de la playlist');
+  } else {
+    addToPlaylist(_tpPlId, filename);
+    toast('✅ Ajouté à la playlist');
+  }
+  _renderTrackPicker();
+  // Met à jour le sous-titre du détail en live
+  const newPl = getPlaylists()[_tpPlId];
+  if(newPl){
+    const subEl = document.getElementById('detailSub');
+    if(subEl) subEl.textContent = newPl.tracks.length + ' chanson' + (newPl.tracks.length !== 1 ? 's' : '');
   }
 }
 
