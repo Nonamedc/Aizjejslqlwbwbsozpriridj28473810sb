@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Arya — Lecteur Musical</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0c0810">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arya">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- EASTER EGGS — outside pseudoScreen so they survive display:none -->
+<canvas id="emberCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:1;width:100%;height:100%;"></canvas>
+<div id="faceless" aria-label="une fille n'a pas de nom" style="display:none;position:fixed;inset:0;background:#fff;z-index:9990;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:18px;letter-spacing:.2em;color:#111;cursor:pointer;"></div>
+<div id="wolfPixel" style="position:fixed;bottom:200px;left:33px;width:1px;height:1px;cursor:pointer;z-index:9998;" title=""></div>
+<div id="easterEye" style="position:fixed;bottom:106px;left:50%;transform:translateX(-50%);font-size:22px;z-index:999;pointer-events:none;opacity:0;transition:opacity .4s;"></div>
+<!-- end easter eggs -->
+
+<!-- PSEUDO SCREEN -->
+<div class="pseudo-screen" id="pseudoScreen">
+  <div class="pseudo-box">
+    <div class="pseudo-emoji">🎵</div>
+    <h2 class="pseudo-h">Bienvenue sur Arya</h2>
+    <p class="pseudo-sub">Choisissez un pseudo pour écouter en ligne avec les autres</p>
+    <input class="form-input" id="pseudoInput" placeholder="Votre pseudo..." style="text-align:center;margin-bottom:14px;font-size:15px;">
+    <button class="btn btn-acc" onclick="setPseudo()" style="width:100%;font-size:15px;padding:11px;">Entrer →</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark" id="logoMark" onclick="logoClick()" style="cursor:pointer;">♪</div>
+    <span class="logo-text" onclick="logoClick()" style="cursor:pointer;" title="✦">Arya</span>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Bibliothèque</div>
+    <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
+      <span class="nav-icon">🏠</span> Accueil
+    </div>
+    <div class="nav-item" data-view="songs" onclick="showView('songs')">
+      <span class="nav-icon">🎵</span> Chansons
+    </div>
+    <div class="nav-item" data-view="albums" onclick="showView('albums')">
+      <span class="nav-icon">💿</span> Albums
+    </div>
+    <div class="nav-item" data-view="artists" onclick="showView('artists')">
+      <span class="nav-icon">🎤</span> Artistes
+    </div>
+    <div class="nav-item" data-view="favorites" onclick="showView('favorites')">
+      <span class="nav-icon">❤️</span> Favoris
+      <span class="nav-badge" id="favBadge" style="display:none;">0</span>
+    </div>
+    <div class="nav-item" data-view="history" onclick="showView('history')">
+      <span class="nav-icon">🕐</span> Historique
+    </div>
+    <div class="nav-item" data-view="playlists" onclick="showView('playlists')">
+      <span class="nav-icon">📋</span> Playlists
+      <span class="nav-badge" id="plBadge" style="display:none;">0</span>
+    </div>
+  </div>
+
+  <div class="nav-section" style="margin-top:8px;">
+    <div class="nav-label">Outils</div>
+    <div class="nav-item" data-view="stats" onclick="showView('stats')">
+      <span class="nav-icon">📊</span> Statistiques
+    </div>
+    <div class="nav-item" data-view="party" onclick="showView('party')">
+      <span class="nav-icon">🎉</span> Mode Fête
+      <div class="online-dot" id="partyDot" style="display:none;background:var(--rose);box-shadow:0 0 6px var(--rose);"></div>
+    </div>
+    <div class="nav-item" data-view="editor" onclick="showView('editor')">
+      <span class="nav-icon">✏️</span> Éditeur méta
+      <span class="enrich-badge" id="enrichBadge" style="display:none;"></span>
+    </div>
+    <div class="nav-item" data-view="online" onclick="showView('online')">
+      <span class="nav-icon">🌐</span> En ligne
+      <div class="online-dot" id="onlineDot" style="display:none;"></div>
+    </div>
+    <div class="nav-item" data-view="upload" onclick="showView('upload')">
+      <span class="nav-icon">📤</span> Ajouter
+    </div>
+    <div class="nav-item" data-view="data" onclick="showView('data')">
+      <span class="nav-icon">💾</span> Import / Export
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sf-label">Connecté en tant que</div>
+    <div class="sf-pseudo" id="sfPseudo">—</div>
+    <div class="sf-change" onclick="changePseudo()">Changer de pseudo</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- Sticky search bar -->
+  <div class="sticky-bar">
+    <button class="burger-btn" onclick="openSidebarDrawer()" aria-label="Menu">☰</button>
+    <div class="search-wrap">
+      <span class="search-ico">🔍</span>
+      <input class="search-input" id="searchInput" placeholder="Chercher un titre, artiste, album..." oninput="onSearch()">
+    </div>
+    <div id="playingBanner" style="display:none;margin-left:auto;font-size:12.5px;color:var(--text2);align-items:center;gap:8px;">
+      <span id="bannerText"></span>
+    </div>
+  </div>
+
+  <!-- Party banner -->
+  <div class="party-banner" id="partyBanner">
+    <div class="party-banner-pulse"></div>
+    <span id="partyBannerText">🎉 Mode Fête actif</span>
+    <span class="party-banner-leave" onclick="leaveOrStopParty()">Quitter</span>
+  </div>
+
+  <!-- ── DASHBOARD VIEW ── -->
+  <div class="view active" id="view-dashboard">
+    <div class="view-header">
+      <div class="view-title">Bonjour 👋</div>
+      <div class="view-sub" id="dashGreeting">Que voulez-vous écouter ?</div>
+    </div>
+    <div id="dashContent"></div>
+  </div>
+
+  <!-- ── SONGS VIEW ── -->
+  <div class="view" id="view-songs">
+    <div class="view-header">
+      <div class="view-title">Toutes les chansons</div>
+      <div class="view-sub" id="songCount">Chargement…</div>
+      <div class="detail-acts" style="margin-top:14px;">
+        <button class="btn btn-acc" onclick="playAllSongs()">▶ Tout lire</button>
+        <button class="btn btn-ghost" onclick="shuffleAllSongs()">⇄ Aléatoire</button>
+      </div>
+    </div>
+    <div class="sort-pills">
+      <button class="sort-pill active" data-field="title" onclick="sortBy('title',this)">Titre <span class="pill-dir">↑</span></button>
+      <button class="sort-pill" data-field="artist" onclick="sortBy('artist',this)">Artiste</button>
+      <button class="sort-pill" data-field="album" onclick="sortBy('album',this)">Album</button>
+      <button class="sort-pill" data-field="year" onclick="sortBy('year',this)">Année</button>
+      <button class="sort-pill" data-field="genre" onclick="sortBy('genre',this)">Genre</button>
+      <button class="sort-pill" data-field="length" onclick="sortBy('length',this)">Durée</button>
+    </div>
+    <div class="col-heads">
+      <div>#</div><div></div>
+      <div>Titre</div><div>Artiste</div><div>Album</div><div style="text-align:right">Durée</div>
+    </div>
+    <div class="track-list" id="trackList">
+      <div class="loading"><div class="spinner"></div><div style="color:var(--text2);font-size:13.5px;">Chargement de la bibliothèque…</div></div>
+    </div>
+  </div>
+
+  <!-- ── ALBUMS VIEW ── -->
+  <div class="view" id="view-albums">
+    <div class="view-header">
+      <div class="view-title">Albums</div>
+      <div class="view-sub" id="albumCount">—</div>
+    </div>
+    <div class="grid-cards" id="albumGrid"></div>
+  </div>
+
+  <!-- ── ARTISTS VIEW ── -->
+  <div class="view" id="view-artists">
+    <div class="view-header">
+      <div class="view-title">Artistes</div>
+      <div class="view-sub" id="artistCount">—</div>
+    </div>
+    <div class="grid-cards" id="artistGrid"></div>
+  </div>
+
+  <!-- ── DETAIL VIEW ── -->
+  <div class="view" id="view-detail">
+    <div class="back-btn" onclick="goBack()">← Retour</div>
+    <div class="detail-hero">
+      <div class="detail-art" id="detailArt">💿</div>
+      <div>
+        <div class="detail-type" id="detailType">Album</div>
+        <div class="detail-name" id="detailName">—</div>
+        <div class="detail-meta-sub" id="detailSub">—</div>
+        <div class="detail-acts">
+          <button class="btn btn-acc" onclick="playDetailAll()">▶ Tout lire</button>
+          <button class="btn btn-ghost" onclick="shuffleDetailAll()">⇄ Aléatoire</button>
+          <button class="btn btn-ghost" id="detailAddBtn" style="display:none;" onclick="openTrackPicker(_plDetailId)">＋ Ajouter</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-heads detail-col-heads">
+      <div>#</div><div></div><div>Titre</div><div>Info</div><div style="text-align:right">Durée</div>
+    </div>
+    <div class="track-list" id="detailList"></div>
+  </div>
+
+  <!-- ── FAVORITES VIEW ── -->
+  <div class="view" id="view-favorites">
+    <div class="view-header">
+      <div class="view-title">❤️ Favoris</div>
+      <div class="view-sub" id="favCount">—</div>
+      <div class="detail-acts" style="margin-top:14px;" id="favPlayActs" style="display:none;">
+        <button class="btn btn-acc" onclick="playAllFavs()">▶ Tout lire</button>
+        <button class="btn btn-ghost" onclick="shuffleAllFavs()">⇄ Aléatoire</button>
+      </div>
+    </div>
+    <div class="col-heads">
+      <div>#</div><div></div>
+      <div>Titre</div><div>Artiste</div><div>Album</div><div style="text-align:right">Durée</div>
+    </div>
+    <div class="track-list" id="favList"></div>
+  </div>
+
+  <!-- ── HISTORY VIEW ── -->
+  <div class="view" id="view-history">
+    <div class="view-header">
+      <div class="view-title">🕐 Historique</div>
+      <div class="view-sub" id="histCount">—</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn btn-ghost" onclick="clearHistory()" style="font-size:12px;padding:6px 14px;">🗑 Effacer</button>
+    </div>
+    <div class="col-heads hist-col-heads">
+      <div>#</div><div></div>
+      <div>Titre</div><div>Artiste</div><div>Quand</div><div style="text-align:right">Heure</div>
+    </div>
+    <div class="track-list" id="histList"></div>
+  </div>
+
+  <!-- ── STATS VIEW ── -->
+  <div class="view" id="view-stats">
+    <div class="view-header">
+      <div class="view-title">📊 Statistiques</div>
+      <div class="view-sub" id="statsSubtitle">—</div>
+    </div>
+    <div id="statsContent"></div>
+  </div>
+
+  <!-- ── PARTY VIEW ── -->
+  <div class="view" id="view-party">
+    <div class="view-header">
+      <div class="view-title">🎉 Mode Fête</div>
+      <div class="view-sub" id="partyStatusSub">Synchronisez votre musique en temps réel</div>
+    </div>
+    <div id="partyContent"></div>
+  </div>
+
+  <!-- ── ONLINE VIEW ── -->
+  <div class="view" id="view-online">
+    <div class="view-header">
+      <div class="view-title">En ligne</div>
+      <div class="view-sub" id="onlineCount">Connexion…</div>
+    </div>
+    <div class="online-grid" id="onlineGrid"></div>
+  </div>
+
+  <!-- ── EDITOR VIEW ── -->
+  <div class="view" id="view-editor">
+    <div class="view-header">
+      <div class="view-title">Éditeur de métadonnées</div>
+      <div class="view-sub">Modifiez les infos de vos chansons — sauvegardées localement</div>
+    </div>
+    <div class="editor-layout">
+      <div>
+        <div class="ed-section-label">Sélectionner une chanson</div>
+        <div class="ed-list" id="edList"></div>
+      </div>
+      <div>
+        <div id="edPlaceholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:var(--text3);gap:12px;">
+          <div style="font-size:48px;opacity:.4;">✏️</div>
+          <div style="font-size:13.5px;">Sélectionnez une chanson à gauche</div>
+        </div>
+        <div id="edForm" style="display:none;">
+          <div class="ed-section-label" id="edFormLabel">Éditer</div>
+          <div class="form-card">
+            <!-- Cover preview + search -->
+            <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:14px;">
+              <div class="ed-cover-preview" id="ed-cover-preview">🎵</div>
+              <div style="flex:1;min-width:0;">
+                <label class="form-label">Pochette (URL)</label>
+                <input class="form-input mono" id="ed-cover" placeholder="https://… ou laisser vide">
+                <div class="ed-cover-search" style="margin-top:8px;">
+                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="enrichTrackManual(edTrack?.id)">⚡ Auto-chercher</button>
+                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="openItunesSearch(edTrack?.id,'','cover')">🔍 Recherche libre</button>
+                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="searchArtistImgManual(edTrack?.id)">🎤 Photo artiste</button>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:8px;">
+                  <input class="form-input mono" id="ed-meta-url" placeholder="🌐 Colle un lien à grapper…" style="font-size:11.5px;">
+                  <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;white-space:nowrap;flex-shrink:0;" onclick="fetchMetaFromUrl()">↓ Grapper</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Titre</label>
+              <input class="form-input" id="ed-title" placeholder="Titre de la chanson">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Artiste</label>
+              <input class="form-input" id="ed-artist" placeholder="Nom de l'artiste">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Album</label>
+              <input class="form-input" id="ed-album" placeholder="Nom de l'album">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Année</label>
+                <input class="form-input" id="ed-year" placeholder="2024" type="number" min="1900" max="2100">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Genre</label>
+                <input class="form-input" id="ed-genre" placeholder="Pop, Rock, Jazz…">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fichier source</label>
+              <input class="form-input mono" id="ed-file" readonly>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🎵 URL Deezer <span style="font-size:10px;color:var(--text3);font-weight:400;">(remplace Archive.org pour cette piste)</span></label>
+              <input class="form-input mono" id="ed-deezer" placeholder="https://deezer.page.link/… ou lien direct .mp3">
+            </div>
+            <div class="form-acts">
+              <button class="btn btn-acc" onclick="saveEdMeta()" style="flex:1;">💾 Sauvegarder</button>
+              <button class="btn btn-ghost" onclick="resetEdMeta()">↺ Réinitialiser</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ── UPLOAD VIEW ── -->
+  <div class="view" id="view-upload">
+    <div class="view-header">
+      <div class="view-title">📤 Ajouter des musiques</div>
+      <div class="view-sub" id="uploadSubtitle">Envoyez vos fichiers audio dans la playlist <strong>blind-test-huhu</strong> sur Archive.org</div>
+    </div>
+
+    <!-- Infos -->
+    <div class="upload-info-banner">
+      🗝️ Les fichiers sont uploadés directement dans l'item <strong>blind-test-huhu</strong> sur Archive.org.<br>
+      Vous avez besoin de vos clés S3 Archive.org (gratuites).
+      Obtenez-les sur <a href="https://archive.org/account/s3.php" target="_blank">archive.org/account/s3.php</a>.
+    </div>
+
+    <!-- Credentials -->
+    <div class="upload-creds-box">
+      <div class="upload-creds-toggle" onclick="toggleUploadCreds()">
+        <span>🔑</span>
+        <span id="uploadCredsLabel">Clés Archive.org — <span id="uploadCredsStatus" style="color:var(--text3);">non configurées</span></span>
+        <span id="uploadCredsArrow" style="margin-left:auto;font-size:11px;color:var(--text3);">▼</span>
+      </div>
+      <div class="upload-creds-body" id="uploadCredsBody">
+        <div class="upload-creds-hint">
+          Connectez-vous sur <a href="https://archive.org/account/s3.php" target="_blank">archive.org/account/s3.php</a>,
+          puis copiez vos clés Access Key et Secret Key ci-dessous.<br>
+          Elles sont sauvegardées en local sur votre appareil uniquement.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Access Key</label>
+          <input class="form-input mono" id="uploadAccessKey" placeholder="ex: XXXXXXXXXXXX" oninput="saveUploadCreds()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Secret Key</label>
+          <input class="form-input mono" id="uploadSecretKey" placeholder="ex: YYYYYYYYYYYYYYYY" type="password" oninput="saveUploadCreds()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="upload-dropzone" id="uploadDropzone"
+         onclick="document.getElementById('uploadFileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleUploadDrop(event)">
+      <div class="upload-dropzone-ico">🎵</div>
+      <div class="upload-dropzone-text">
+        <strong>Cliquez ou glissez vos fichiers audio ici</strong><br>
+        Format obligatoire : <code style="background:var(--surface);padding:1px 6px;border-radius:4px;font-size:12px;">Artiste - Titre.mp3</code><br>
+        <span style="font-size:12px;color:var(--text3);">MP3, FLAC, OGG, WAV, M4A · Les doublons sont ignorés automatiquement</span>
+      </div>
+    </div>
+    <input type="file" id="uploadFileInput" multiple accept=".mp3,.flac,.ogg,.wav,.m4a,audio/*" style="display:none" onchange="handleUploadFiles(this.files)">
+
+    <!-- File queue -->
+    <div class="upload-file-list" id="uploadFileList"></div>
+
+    <!-- Actions -->
+    <div class="upload-actions" id="uploadActionsBar" style="display:none;">
+      <button class="btn btn-acc" id="uploadStartBtn" onclick="startUpload()">📤 Envoyer tout</button>
+      <button class="btn btn-ghost" onclick="clearUploadQueue()">🗑 Vider</button>
+      <span id="uploadQueueInfo" style="font-size:12.5px;color:var(--text3);margin-left:auto;"></span>
+    </div>
+
+    <!-- Summary -->
+    <div class="upload-summary" id="uploadSummary"></div>
+  </div>
+  <!-- ── PLAYLISTS VIEW ── -->
+  <div class="view" id="view-playlists">
+    <div class="view-header">
+      <div class="view-title">📋 Playlists</div>
+      <div class="view-sub" id="plCount">—</div>
+    </div>
+    <button class="playlist-new-btn" onclick="promptCreatePlaylist()">
+      <span style="font-size:22px;">＋</span>
+      <span>Nouvelle playlist</span>
+    </button>
+    <div class="playlist-list" id="playlistList"></div>
+  </div>
+
+  <!-- ── DATA VIEW ── -->
+  <div class="view" id="view-data">
+    <div class="view-header">
+      <div class="view-title">💾 Import / Export</div>
+      <div class="view-sub">Sauvegardez ou restaurez toutes vos données Arya</div>
+    </div>
+    <div class="data-section-label" style="margin-top:0;">Export</div>
+    <div class="data-card">
+      <div class="data-card-title">📦 Exporter toutes les données</div>
+      <div class="data-card-sub">
+        Télécharge un fichier JSON contenant vos métadonnées modifiées, favoris, historique d'écoute, statistiques, playlists et images d'artistes.<br>
+        Idéal pour sauvegarder avant un changement d'appareil.
+      </div>
+      <div class="data-acts">
+        <button class="btn btn-acc" onclick="exportData()">⬇️ Télécharger l'export</button>
+      </div>
+    </div>
+    <div class="data-section-label">Import</div>
+    <div class="data-card">
+      <div class="data-card-title">🔀 Fusionner avec un export</div>
+      <div class="data-card-sub">
+        Importe un fichier JSON Arya et <strong>fusionne</strong> les données avec vos données actuelles.<br>
+        Favoris, playlists et statistiques sont combinés. Vos données existantes ne sont pas effacées.
+      </div>
+      <div class="data-acts">
+        <button class="btn btn-ghost" onclick="importData('merge')">📂 Choisir un fichier</button>
+      </div>
+    </div>
+    <div class="data-card">
+      <div class="data-card-title">♻️ Remplacer toutes les données</div>
+      <div class="data-card-sub">
+        Importe un fichier JSON Arya et <strong>remplace complètement</strong> vos données locales.<br>
+        ⚠️ Action irréversible — à utiliser pour restaurer une sauvegarde.
+      </div>
+      <div class="data-acts">
+        <button class="btn btn-rose" onclick="importData('replace')">⚠️ Remplacer</button>
+      </div>
+    </div>
+    <div class="data-section-label">Enrichissement automatique</div>
+    <div class="data-card">
+      <div class="data-card-title">🎨 Assigner les métadonnées manquantes</div>
+      <div class="data-card-sub">
+        Lance la récupération automatique des <strong>pochettes, albums, années et genres</strong> pour toutes les chansons qui n'en ont pas encore, via Deezer et iTunes.<br>
+        <span id="enrichStatusText" style="color:var(--text3);font-size:12px;margin-top:4px;display:block;">Statut : non lancé</span>
+      </div>
+      <div class="data-acts">
+        <button class="btn btn-acc" id="enrichStartBtn" onclick="launchEnrichmentFromData()">🚀 Lancer l'enrichissement</button>
+        <button class="btn btn-ghost" id="enrichStopBtn" onclick="stopEnrichment()" style="display:none;border-color:var(--rose);color:var(--rose);">⏹ Arrêter</button>
+      </div>
+    </div>
+    <div class="data-section-label">Réinitialisation</div>
+    <div class="data-card">
+      <div class="data-card-title">🗑 Effacer toutes les données locales</div>
+      <div class="data-card-sub">
+        Supprime définitivement les métadonnées, favoris, historique, stats et playlists stockés sur cet appareil.
+      </div>
+      <div class="data-acts">
+        <button class="btn btn-ghost" onclick="clearAllData()" style="border-color:var(--rose);color:var(--rose);">🗑 Tout effacer</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- PLAYER -->
+<div class="player">
+
+  <!-- Left: artwork + meta -->
+  <div class="p-info" onclick="openFsPlayerIfMobile()">
+    <div class="p-art" id="pArt">🎵</div>
+    <div class="p-meta">
+      <div class="p-title" id="pTitle">Aucune chanson</div>
+      <div class="p-artist" id="pArtist">Arya</div>
+    </div>
+  </div>
+
+  <!-- Center: buttons + progress -->
+  <div class="p-center">
+    <div class="p-btns">
+      <button class="p-btn" id="btnShuffle" onclick="toggleShuffle()" title="Aléatoire">⇄</button>
+      <button class="p-btn" onclick="prevTrack()" title="Précédent">⏮</button>
+      <button class="p-btn p-play" id="btnPlay" onclick="togglePlay()">▶</button>
+      <button class="p-btn" onclick="nextTrack()" title="Suivant">⏭</button>
+      <button class="p-btn" id="btnRepeat" onclick="toggleRepeat()" title="Répéter">↺</button>
+    </div>
+    <div class="p-progress">
+      <span class="p-time" id="pElapsed">0:00</span>
+      <div class="p-track" id="pTrack" onclick="seekTo(event)">
+        <div class="p-fill" id="pFill" style="width:0%"></div>
+      </div>
+      <span class="p-time r" id="pDur">0:00</span>
+    </div>
+  </div>
+
+  <!-- Right: volume + party -->
+  <div class="p-right">
+    <div class="vol-wrap">
+      <span class="vol-ico" id="volIco">🔊</span>
+      <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="80" oninput="setVol(this.value)">
+    </div>
+    <button class="p-btn" id="btnParty" onclick="showView('party')" title="Mode Fête" style="font-size:18px;margin-left:6px;">🎉</button>
+  </div>
+
+</div>
+
+<!-- TOASTS -->
+<div class="toasts" id="toasts"></div>
+
+<!-- MOBILE NAV -->
+<nav class="mobile-nav">
+  <button class="mn-btn active" data-view="dashboard" onclick="showView('dashboard')">
+    <span class="mn-ico">🏠</span>Accueil
+  </button>
+  <button class="mn-btn" data-view="songs" onclick="showView('songs')">
+    <span class="mn-ico">🎵</span>Chansons
+  </button>
+  <button class="mn-btn" data-view="favorites" onclick="showView('favorites')">
+    <span class="mn-ico">❤️</span>Favoris
+  </button>
+  <button class="mn-btn" data-view="albums" onclick="showView('albums')">
+    <span class="mn-ico">💿</span>Albums
+  </button>
+  <button class="mn-btn" data-view="artists" onclick="showView('artists')">
+    <span class="mn-ico">🎤</span>Artistes
+  </button>
+  <button class="mn-btn" id="mnMoreBtn" onclick="openMoreSheet()">
+    <span class="mn-ico">⋯</span>Plus
+  </button>
+</nav>
+
+<!-- MORE BOTTOM SHEET -->
+<div class="more-backdrop" id="moreBackdrop" onclick="closeMoreSheet()"></div>
+<div class="more-sheet" id="moreSheet">
+  <div class="more-sheet-handle"></div>
+  <div class="more-sheet-title">Navigation</div>
+  <div class="more-grid">
+    <div class="more-item" id="moreStats" data-view="stats" onclick="showViewFromMore('stats')">
+      <span class="more-ico">📊</span>Stats
+    </div>
+    <div class="more-item" id="moreParty" data-view="party" onclick="showViewFromMore('party')">
+      <span class="more-ico">🎉</span>Mode Fête
+    </div>
+    <div class="more-item" id="moreHistory" data-view="history" onclick="showViewFromMore('history')">
+      <span class="more-ico">🕐</span>Historique
+    </div>
+    <div class="more-item" id="moreOnline" data-view="online" onclick="showViewFromMore('online')">
+      <span class="more-ico">🌐</span>En ligne
+    </div>
+    <div class="more-item" id="moreEditor" data-view="editor" onclick="showViewFromMore('editor')">
+      <span class="more-ico">✏️</span>Éditeur méta
+    </div>
+    <div class="more-item" id="moreUpload" data-view="upload" onclick="showViewFromMore('upload')">
+      <span class="more-ico">📤</span>Ajouter
+    </div>
+    <div class="more-item" id="morePlaylists" data-view="playlists" onclick="showViewFromMore('playlists')">
+      <span class="more-ico">📋</span>Playlists
+    </div>
+    <div class="more-item" id="moreData" data-view="data" onclick="showViewFromMore('data')">
+      <span class="more-ico">💾</span>Import/Export
+    </div>
+  </div>
+</div>
+
+<!-- ITUNES SEARCH SHEET -->
+<div class="itunes-backdrop" id="itunesBackdrop" onclick="closeItunesSearch()"></div>
+<div class="itunes-sheet" id="itunesSheet">
+  <div class="itunes-sheet-handle"></div>
+  <div class="itunes-sheet-header">
+    <div class="itunes-sheet-title">
+      <span id="itunesSheetTitle">🔍 Recherche iTunes</span>
+      <button class="itunes-sheet-close" onclick="closeItunesSearch()">✕</button>
+    </div>
+    <div class="itunes-search-row">
+      <input class="itunes-query-input" id="itunesQueryInput" placeholder="Artiste – Titre…"
+             onkeydown="if(event.key==='Enter')runItunesSearch()"
+             oninput="_itunesDebounce()">
+      <button class="btn btn-acc" style="padding:9px 16px;font-size:13px;white-space:nowrap;" onclick="runItunesSearch()">🔍 Chercher</button>
+    </div>
+  </div>
+  <div class="itunes-results" id="itunesResults">
+    <div class="itunes-empty">Tape un nom d'artiste ou de titre<br>et lance la recherche ✨</div>
+  </div>
+</div>
+
+<!-- ADD-TO-PLAYLIST SHEET -->
+<div class="pl-sheet-backdrop" id="plSheetBackdrop" onclick="closePlSheet()"></div>
+<div class="pl-sheet" id="plSheet">
+  <div class="pl-sheet-handle"></div>
+  <div class="pl-sheet-header">
+    <span class="pl-sheet-title">🎵 Ajouter à une playlist</span>
+    <button class="pl-sheet-close" onclick="closePlSheet()">✕</button>
+  </div>
+  <div class="pl-sheet-list" id="plSheetList"></div>
+</div>
+<!-- TRACK PICKER SHEET -->
+<div class="tp-backdrop" id="tpBackdrop" onclick="closeTrackPicker()"></div>
+<div class="tp-sheet" id="tpSheet">
+  <div class="tp-handle"></div>
+  <div class="tp-header">
+    <div class="tp-header-row">
+      <span class="tp-title" id="tpTitle">➕ Ajouter des titres</span>
+      <button class="tp-close" onclick="closeTrackPicker()">✕</button>
+    </div>
+    <input class="tp-search" id="tpSearch" placeholder="Chercher un titre, artiste…" oninput="_renderTrackPicker()">
+    <div class="tp-count" id="tpCount"></div>
+  </div>
+  <div class="tp-list" id="tpList"></div>
+</div>
+<div class="fs-player" id="fsPlayer">
+
+  <!-- Handle (tap to close) -->
+  <button class="fs-close" onclick="closeFsPlayer()" aria-label="Fermer"></button>
+
+  <!-- Artwork -->
+  <div class="fs-art" id="fsArt">🎵</div>
+
+  <!-- Meta -->
+  <div style="width:100%;text-align:center;">
+    <div class="fs-title" id="fsTitle">Aucune chanson</div>
+    <div class="fs-artist" id="fsArtist">Arya</div>
+  </div>
+
+  <!-- Progress -->
+  <div class="fs-progress">
+    <span class="fs-time" id="fsElapsed">0:00</span>
+    <div class="fs-track" id="fsTrack" onclick="fsSeekTo(event)">
+      <div class="fs-fill" id="fsFill" style="width:0%"></div>
+    </div>
+    <span class="fs-time r" id="fsDur">0:00</span>
+  </div>
+
+  <!-- Controls -->
+  <div class="fs-btns">
+    <button class="fs-btn" id="fsBtnShuffle" onclick="toggleShuffle()">⇄</button>
+    <button class="fs-btn" onclick="prevTrack()">⏮</button>
+    <button class="fs-btn fs-play" id="fsBtnPlay" onclick="togglePlay()">▶</button>
+    <button class="fs-btn" onclick="nextTrack()">⏭</button>
+    <button class="fs-btn" id="fsBtnRepeat" onclick="toggleRepeat()">↺</button>
+  </div>
+
+  <!-- Volume -->
+  <div class="fs-vol-wrap">
+    <span class="fs-vol-ico" id="fsVolIco">🔈</span>
+    <input type="range" class="fs-vol-slider" id="fsVolSlider" min="0" max="100" value="80" oninput="setVolFs(this.value)">
+    <span class="fs-vol-ico">🔊</span>
+  </div>
+
+  <!-- Lyrics toggle + swipe hint row -->
+  <div style="display:flex;align-items:center;gap:14px;width:100%;justify-content:center;">
+    <div class="fs-swipe-hint" style="flex:1;text-align:right;">← glisser →</div>
+    <button class="fs-lyrics-btn" id="fsLyricsBtn" onclick="toggleLyricsPanel()" title="Paroles">🎤</button>
+    <div style="flex:1;"></div>
+  </div>
+
+  <!-- Lyrics panel (absolute over the whole FS player) -->
+  <div class="fs-lyrics-panel" id="fsLyricsPanel"></div>
+
+</div>
+
+
+<!-- Dépendances externes -->
+<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/shaka-player@5/dist/shaka-player.compiled.min.js"></script>
+
+<!-- Arya — modules JS (ordre de chargement important) -->
+<script src="js/config.js"></script>
+<script src="js/audio-engine.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/covers.js"></script>
+<script src="js/library.js"></script>
+<script src="js/party.js"></script>
+<script src="js/archive.js"></script>
+<script src="js/render.js"></script>
+<script src="js/playback.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/online.js"></script>
+<script src="js/upload.js"></script>
+<script src="js/lyrics.js"></script>
+<script src="js/fullscreen.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/playlists.js"></script>
+<script src="js/data.js"></script>
+<script src="js/init.js"></script>  <!-- EN DERNIER : lance tout -->
+<!-- Backdrop sidebar drawer mobile -->
+<div id="sidebarBackdrop" onclick="closeSidebarDrawer()"></div>
+</body>
