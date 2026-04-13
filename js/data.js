@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════
-   ENRICHISSEMENT MANUEL — lancé depuis la vue Données
+   ENRICHISSEMENT MANUEL
 ══════════════════════════════════════════════ */
 let _enrichStopped = false;
 
@@ -14,7 +14,7 @@ function launchEnrichmentFromData(){
 
 function stopEnrichment(){
   _enrichStopped = true;
-  _enrichQueue = [];   // vide la queue → les workers s'arrêtent naturellement
+  _enrichQueue = [];
   _enrichRunning = false;
   updateEnrichBadge();
   _updateEnrichDataUI('stopped');
@@ -44,10 +44,8 @@ function _updateEnrichDataUI(state){
   }
 }
 
-
 /* ══════════════════════════════════════════════
-   APPLY META — réapplique les métadonnées sauvegardées
-   aux objets track en mémoire (utilisé après import/clear)
+   APPLY META
 ══════════════════════════════════════════════ */
 function applyMeta(){
   const meta = getMeta();
@@ -59,7 +57,6 @@ function applyMeta(){
     if(s.album)     t.album     = s.album;
     if(s.year)      t.year      = s.year;
     if(s.genre)     t.genre     = s.genre;
-    if(s.cover)     {} // géré via getCover()
     if(s.deezerUrl) t.deezerUrl = s.deezerUrl;
     else            delete t.deezerUrl;
   });
@@ -67,11 +64,11 @@ function applyMeta(){
 }
 
 /* ══════════════════════════════════════════════
-   IMPORT / EXPORT DE DONNÉES
+   IMPORT / EXPORT
 ══════════════════════════════════════════════ */
 function exportData(){
   const data = {
-    version: 1,
+    version: 2,
     exported: new Date().toISOString(),
     appName: 'Arya',
     meta:        JSON.parse(localStorage.getItem(META_STORE)        || '{}'),
@@ -112,11 +109,18 @@ function importData(mode){
         localStorage.setItem(STATS_STORE,      JSON.stringify(data.stats      || {}));
         localStorage.setItem(PLAYLIST_STORE,   JSON.stringify(data.playlists  || {}));
         if(data.artistImgs) localStorage.setItem(ARTIST_IMG_STORE, JSON.stringify(data.artistImgs));
+
       } else {
-        // Merge
+        // ── MODE FUSION ──
+        // ⚠️ Les stats NE SONT PAS importées en mode fusion pour ne pas fausser
+        //    le classement des autres utilisateurs. Seules les métadonnées, pochettes,
+        //    favoris, playlists et images d'artistes sont fusionnées.
+
         if(data.meta){
           const cur = JSON.parse(localStorage.getItem(META_STORE)||'{}');
-          localStorage.setItem(META_STORE, JSON.stringify({...cur, ...data.meta}));
+          // Priorité au local pour les champs déjà renseignés
+          const merged = {...data.meta, ...cur};
+          localStorage.setItem(META_STORE, JSON.stringify(merged));
         }
         if(data.favs){
           const cur = new Set(JSON.parse(localStorage.getItem(FAV_STORE)||'[]'));
@@ -125,19 +129,17 @@ function importData(mode){
         }
         if(data.history){
           const cur = JSON.parse(localStorage.getItem(HIST_STORE)||'[]');
-          const merged = [...(data.history||[]), ...cur];
+          const merged = [...cur, ...(data.history||[])];
           const seen = new Set();
-          const deduped = merged.filter(h => { const k = h.filename + h.ts; if(seen.has(k)) return false; seen.add(k); return true; });
-          localStorage.setItem(HIST_STORE, JSON.stringify(deduped.slice(0, MAX_HIST)));
-        }
-        if(data.stats){
-          const cur = JSON.parse(localStorage.getItem(STATS_STORE)||'{}');
-          const merged = {...cur};
-          Object.entries(data.stats||{}).forEach(([k, v]) => {
-            if(merged[k]){ merged[k].plays = (merged[k].plays||0)+(v.plays||0); merged[k].seconds = (merged[k].seconds||0)+(v.seconds||0); }
-            else { merged[k] = v; }
+          const deduped = merged.filter(h => {
+            const k = h.filename + h.ts;
+            if(seen.has(k)) return false;
+            seen.add(k);
+            return true;
           });
-          localStorage.setItem(STATS_STORE, JSON.stringify(merged));
+          // Tri anti-chron et limite
+          deduped.sort((a,b) => b.ts - a.ts);
+          localStorage.setItem(HIST_STORE, JSON.stringify(deduped.slice(0, MAX_HIST)));
         }
         if(data.playlists){
           const cur = JSON.parse(localStorage.getItem(PLAYLIST_STORE)||'{}');
@@ -147,6 +149,7 @@ function importData(mode){
           const cur = JSON.parse(localStorage.getItem(ARTIST_IMG_STORE)||'{}');
           localStorage.setItem(ARTIST_IMG_STORE, JSON.stringify({...cur, ...data.artistImgs}));
         }
+        // Note : stats volontairement exclues du mode fusion
       }
 
       applyMeta();
@@ -159,7 +162,9 @@ function importData(mode){
       renderHistory();
       renderPlaylists();
       updateFavBadge();
-      toast('✅ Données importées avec succès');
+
+      const modeLabel = mode === 'replace' ? 'remplacement' : 'fusion (stats conservées)';
+      toast(`✅ Données importées — mode ${modeLabel}`);
     }catch(err){
       console.error('[Arya import]', err);
       toast('⚠️ Fichier invalide ou non reconnu', true);
