@@ -85,6 +85,9 @@
       <span class="nav-icon">🌐</span> En ligne
       <div class="online-dot" id="onlineDot" style="display:none;"></div>
     </div>
+    <div class="nav-item" data-view="leaderboard" onclick="showView('leaderboard')">
+      <span class="nav-icon">🏆</span> Classement
+    </div>
     <div class="nav-item" data-view="upload" onclick="showView('upload')">
       <span class="nav-icon">📤</span> Ajouter
     </div>
@@ -434,7 +437,8 @@
       <div class="data-card-title">🔀 Fusionner avec un export</div>
       <div class="data-card-sub">
         Importe un fichier JSON Arya et <strong>fusionne</strong> les données avec vos données actuelles.<br>
-        Favoris, playlists et statistiques sont combinés. Vos données existantes ne sont pas effacées.
+        Métadonnées, pochettes, favoris et playlists sont fusionnés.<br>
+        ⚠️ Les statistiques personnelles <strong>ne sont pas importées</strong> pour ne pas fausser votre classement.
       </div>
       <div class="data-acts">
         <button class="btn btn-ghost" onclick="importData('merge')">📂 Choisir un fichier</button>
@@ -472,6 +476,15 @@
         <button class="btn btn-ghost" onclick="clearAllData()" style="border-color:var(--rose);color:var(--rose);">🗑 Tout effacer</button>
       </div>
     </div>
+  </div>
+
+  <!-- ── LEADERBOARD VIEW ── -->
+  <div class="view" id="view-leaderboard">
+    <div class="view-header">
+      <div class="view-title">🏆 Classement</div>
+      <div class="view-sub" id="lbSub">Chargement des statistiques…</div>
+    </div>
+    <div id="leaderboardContent"></div>
   </div>
 
 </main>
@@ -569,6 +582,9 @@
     <div class="more-item" id="morePlaylists" data-view="playlists" onclick="showViewFromMore('playlists')">
       <span class="more-ico">📋</span>Playlists
     </div>
+    <div class="more-item" id="moreLeaderboard" data-view="leaderboard" onclick="showViewFromMore('leaderboard')">
+      <span class="more-ico">🏆</span>Classement
+    </div>
     <div class="more-item" id="moreData" data-view="data" onclick="showViewFromMore('data')">
       <span class="more-ico">💾</span>Import/Export
     </div>
@@ -659,15 +675,19 @@
     <span class="fs-vol-ico">🔊</span>
   </div>
 
-  <!-- Lyrics toggle + swipe hint row -->
+  <!-- Lyrics + Queue toggle row -->
   <div style="display:flex;align-items:center;gap:14px;width:100%;justify-content:center;">
     <div class="fs-swipe-hint" style="flex:1;text-align:right;">← glisser →</div>
     <button class="fs-lyrics-btn" id="fsLyricsBtn" onclick="toggleLyricsPanel()" title="Paroles">🎤</button>
+    <button class="fs-lyrics-btn" id="fsQueueBtn" onclick="toggleQueuePanel()" title="File d'attente">≡</button>
     <div style="flex:1;"></div>
   </div>
 
   <!-- Lyrics panel (absolute over the whole FS player) -->
   <div class="fs-lyrics-panel" id="fsLyricsPanel"></div>
+
+  <!-- Queue panel (absolute over the whole FS player) -->
+  <div class="fs-queue-panel" id="fsQueuePanel"></div>
 
 </div>
 
@@ -691,8 +711,10 @@
 <script src="js/upload.js"></script>
 <script src="js/lyrics.js"></script>
 <script src="js/fullscreen.js"></script>
+<script src="js/queue.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/playlists.js"></script>
+<script src="js/leaderboard.js"></script>
 <script src="js/data.js"></script>
 <script src="js/init.js"></script>  <!-- EN DERNIER : lance tout -->
 <!-- Backdrop sidebar drawer mobile -->
