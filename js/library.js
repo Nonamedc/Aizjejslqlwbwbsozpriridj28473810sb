@@ -70,8 +70,8 @@ function getHistory(){ try{ return JSON.parse(localStorage.getItem(HIST_STORE)||
 
 function addToHistory(t){
   const h = getHistory();
-  // Avoid duplicate of same track within 30s
-  if(h.length && h[0].filename === t.filename && (Date.now() - h[0].ts) < 30000) return;
+  // Évite les doublons : même piste dans les 5 minutes (crossfade ou retry)
+  if(h.length && h[0].filename === t.filename && (Date.now() - h[0].ts) < 300000) return;
   h.unshift({ filename:t.filename, title:t.title, artist:t.artist, album:t.album, id:t.id, ts:Date.now() });
   if(h.length > MAX_HIST) h.splice(MAX_HIST);
   localStorage.setItem(HIST_STORE, JSON.stringify(h));
@@ -223,4 +223,3 @@ function renderStats(){
     </div>` : ''}
   `;
 }
-
