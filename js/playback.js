@@ -1,6 +1,11 @@
 /* ═══════════════════════════════════════════
    PLAYBACK
 ═══════════════════════════════════════════ */
+
+// Identifiant de la dernière piste comptabilisée dans les stats
+// → évite de compter avant 50% ET évite les doublons crossfade
+let _countedTrackId = null;
+
 function buildQueue(){
   queue=shuffle?shuffleArr([...tracks]):[...tracks];
   queueIdx=currentId!=null?queue.findIndex(t=>t.id===currentId):0;
@@ -12,7 +17,6 @@ function shuffleArr(arr){
 }
 
 function playTrack(id){
-  // Block manual play when listening to party
   if(partyMode === 'listener') return;
   const t=tracks.find(t=>t.id===id);
   if(!t) return;
@@ -33,26 +37,35 @@ async function loadAndPlay(t){
 
   flushStatAccum();
 
-  // Stoppe proprement les deux lecteurs (évite l'audio fantôme si crossfade en cours)
+  // Stoppe proprement les deux lecteurs
   try { _audio1.pause(); } catch(e) {}
   try { _audio2.pause(); } catch(e) {}
+
+  // Annule tout pré-chargement en cours (évite erreur 3016)
+  await _cancelPreload();
 
   // Reset gapless state
   _swapTriggered = false;
   _xfading       = false;
   _preloadedIdx  = -1;
 
+  // Réinitialise le compteur de lecture pour la nouvelle piste
+  _countedTrackId = null;
+
   try {
     const currentShaka = activePlayer === 1 ? shaka1 : shaka2;
 
-    if (_shakaPendingLoad) await _shakaPendingLoad;
+    if (_shakaPendingLoad) {
+      try { await _shakaPendingLoad; } catch(e) {}
+      _shakaPendingLoad = null;
+    }
 
     try {
       await currentShaka.load(t.deezerUrl || t.url);
     } catch(fetchErr) {
-      // Si l'URL Deezer échoue, on tente l'URL Archive.org en fallback
+      if (fetchErr.code === 7000) throw fetchErr; // LOAD_INTERRUPTED = annulé par l'utilisateur
       if (t.deezerUrl) {
-        console.warn('[Arya] URL Deezer inaccessible, fallback Archive.org :', fetchErr);
+        console.warn('[Arya] URL Deezer inaccessible, fallback Archive.org :', fetchErr.code || fetchErr);
         await currentShaka.load(t.url);
       } else {
         throw fetchErr;
@@ -63,10 +76,9 @@ async function loadAndPlay(t){
     updatePlayerUI(t);
     highlightPlaying();
     broadcastTrack(t);
-    addToHistory(t);
-    recordPlay(t);
+    // ⚠️ addToHistory & recordPlay déplacés à 50% de lecture dans _onTimeUpdate
 
-    // Fetch paroles LRC en arrière-plan
+    // Paroles en arrière-plan
     fetchAndShowLrc(t);
 
     await audio.play();
@@ -74,14 +86,16 @@ async function loadAndPlay(t){
     _statLastTS = audio.currentTime;
 
     // Pré-chargement immédiat de la piste suivante
-    setTimeout(preloadNextTrack, 400);
+    setTimeout(preloadNextTrack, 500);
 
   } catch (err) {
+    if (err.code === 7000) return; // LOAD_INTERRUPTED — changement de piste volontaire, silencieux
     console.error("Erreur lecture :", err);
     toast("Impossible de lire cette piste", true);
     setTimeout(nextTrack, 800);
   }
 }
+
 function updatePlayerUI(t){
   document.getElementById('pTitle').textContent=t.title;
   document.getElementById('pArtist').textContent=t.artist+(t.album&&t.album!=='Sans album'?' · '+t.album:'');
@@ -116,7 +130,6 @@ function togglePlay(){
   } else {
     const savedPos = activeAudio.currentTime;
     activeAudio.play().catch(async () => {
-      // Stream expiré après une longue pause → rechargement + seek
       const t = tracks.find(x => x.id === currentId);
       if(!t) return;
       try {
@@ -147,46 +160,35 @@ function nextTrack(){
 /* ====================== SHUFFLE ====================== */
 function toggleShuffle(){
   shuffle = !shuffle;
-  
   const btn = document.getElementById('btnShuffle');
   const fsBtn = document.getElementById('fsBtnShuffle');
-  
   btn.classList.toggle('on', shuffle);
   if (fsBtn) fsBtn.classList.toggle('on', shuffle);
-
-  buildQueue();           
+  buildQueue();
   toast(shuffle ? '🔀 Aléatoire activé' : '🔀 Aléatoire désactivé');
 }
 
 /* ====================== REPEAT ====================== */
 function toggleRepeat(){
   repeat = (repeat + 1) % 3;
-  
   const btn = document.getElementById('btnRepeat');
   const fsBtn = document.getElementById('fsBtnRepeat');
-
   if (repeat === 0) {
-    btn.textContent = '↺';
-    btn.classList.remove('on', 'rose');
+    btn.textContent = '↺'; btn.classList.remove('on', 'rose');
     if (fsBtn) { fsBtn.textContent = '↺'; fsBtn.classList.remove('on', 'rose'); }
     toast('🔁 Répétition désactivée');
-  } 
-  else if (repeat === 1) {
-    btn.textContent = '↺';
-    btn.classList.add('on');
-    btn.classList.remove('rose');
+  } else if (repeat === 1) {
+    btn.textContent = '↺'; btn.classList.add('on'); btn.classList.remove('rose');
     if (fsBtn) { fsBtn.textContent = '↺'; fsBtn.classList.add('on'); fsBtn.classList.remove('rose'); }
     toast('🔁 Répéter toute la liste');
-  } 
-  else { // repeat === 2
-    btn.textContent = '⟳';
-    btn.classList.add('on', 'rose');
+  } else {
+    btn.textContent = '⟳'; btn.classList.add('on', 'rose');
     if (fsBtn) { fsBtn.textContent = '⟳'; fsBtn.classList.add('on', 'rose'); }
     toast('🔂 Répéter cette chanson');
   }
 }
+
 function setVol(v){
-  // Si un fondu est en cours, ne pas écraser les volumes individuels
   if (!_xfading) {
     _audio1.volume = v / 100;
     _audio2.volume = v / 100;
@@ -204,9 +206,7 @@ function seekTo(e){
   if(activeAudio.duration) activeAudio.currentTime=Math.max(0,Math.min(pct*activeAudio.duration,activeAudio.duration));
 }
 
-/* ─── Audio events — Dual-Player Aware ─── */
-/* On attache les handlers sur _audio1 ET _audio2 ;
-   chaque handler vérifie qu'il provient du lecteur actif. */
+/* ─── Audio events ─── */
 
 function _onTimeUpdate() {
   if (this !== (activePlayer === 1 ? _audio1 : _audio2)) return;
@@ -235,7 +235,7 @@ function _onTimeUpdate() {
     _updatePositionState();
   }
 
-  // ── Sync full-screen player ──
+  // Sync full-screen
   if (_fsOpen) {
     document.getElementById('fsFill').style.width = pct + '%';
     if (!_316active) document.getElementById('fsElapsed').textContent = fmtTime(cur);
@@ -243,10 +243,20 @@ function _onTimeUpdate() {
     if (_lyricsOpen) updateLrcHighlight(cur);
   }
 
+  // ── Comptabilisation à 50% de la piste ──
+  if (_countedTrackId !== currentId && dur > 0 && cur >= dur * 0.5) {
+    _countedTrackId = currentId;
+    const t = tracks.find(x => x.id === currentId);
+    if (t) {
+      recordPlay(t);
+      addToHistory(t);
+      if (typeof pushLeaderboardStats === 'function') pushLeaderboardStats();
+    }
+  }
+
   // ── Déclenchement du fondu croisé ──
   if (!_swapTriggered && !_xfading && dur > 0) {
     const remaining = dur - cur;
-    // Trigger entre 5 et XFADE_TRIGGER secondes selon si piste courte
     const triggerAt = Math.min(XFADE_TRIGGER, dur * 0.15);
     if (remaining <= triggerAt && remaining > 0 && _preloadedIdx >= 0) {
       _swapTriggered = true;
@@ -259,14 +269,23 @@ function _onEnded() {
   if (this !== (activePlayer === 1 ? _audio1 : _audio2)) return;
   flushStatAccum();
 
+  // Assure que la piste courte est quand même comptée
+  if (_countedTrackId !== currentId) {
+    _countedTrackId = currentId;
+    const t = tracks.find(x => x.id === currentId);
+    if (t) {
+      recordPlay(t);
+      addToHistory(t);
+      if (typeof pushLeaderboardStats === 'function') pushLeaderboardStats();
+    }
+  }
+
   if (repeat === 2) {
     this.currentTime = 0;
     this.play().catch(() => {});
   } else if (_preloadedIdx >= 0 && !_xfading) {
-    // Fallback : le fondu n'a pas pu se déclencher à temps
     triggerCrossfade();
   } else if (!_xfading) {
-    // Pas de pré-chargement dispo — lecture classique
     if (queueIdx < queue.length - 1) { queueIdx++; playFromQueue(); }
     else if (repeat === 1) { queueIdx = 0; playFromQueue(); }
   }
@@ -283,11 +302,13 @@ function _onPlay() {
   }
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   _updatePositionState();
+  // Wake Lock : empêche la mise en veille pendant la lecture
+  if (typeof requestWakeLock === 'function') requestWakeLock();
 }
 
 function _onPause() {
   if (this !== (activePlayer === 1 ? _audio1 : _audio2)) return;
-  if (_xfading) return; // pendant le fondu le pause de l'ancien n'est pas un arrêt utilisateur
+  if (_xfading) return;
   isPlaying = false;
   flushStatAccum();
   document.getElementById('btnPlay').textContent = '▶';
@@ -297,6 +318,8 @@ function _onPause() {
     document.getElementById('fsArt').classList.remove('playing-pulse');
   }
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+  // Libère le Wake Lock en pause
+  if (typeof releaseWakeLock === 'function') releaseWakeLock();
 }
 
 [_audio1, _audio2].forEach(el => {
@@ -307,11 +330,7 @@ function _onPause() {
 });
 
 /* ═══════════════════════════════════════════
-   MEDIA SESSION — Notif barre + écran verrouillé
-   Gère : boutons play/pause/prev/next/stop/seek
-   + barre de progression temps réel
-   + artwork multi-résolution
-   + mise à jour après crossfade
+   MEDIA SESSION
 ═══════════════════════════════════════════ */
 
 function _activeAudio() {
@@ -320,21 +339,11 @@ function _activeAudio() {
 
 function _setupMediaSession(){
   if(!('mediaSession' in navigator)) return;
-
-  navigator.mediaSession.setActionHandler('play', () => {
-    _activeAudio().play().catch(() => {});
-  });
-  navigator.mediaSession.setActionHandler('pause', () => {
-    _activeAudio().pause();
-  });
-  navigator.mediaSession.setActionHandler('stop', () => {
-    _activeAudio().pause();
-    _activeAudio().currentTime = 0;
-  });
+  navigator.mediaSession.setActionHandler('play', () => { _activeAudio().play().catch(() => {}); });
+  navigator.mediaSession.setActionHandler('pause', () => { _activeAudio().pause(); });
+  navigator.mediaSession.setActionHandler('stop', () => { _activeAudio().pause(); _activeAudio().currentTime = 0; });
   navigator.mediaSession.setActionHandler('nexttrack', () => { nextTrack(); });
   navigator.mediaSession.setActionHandler('previoustrack', () => { prevTrack(); });
-
-  // Scrubbing depuis l'écran verrouillé / la notif
   try {
     navigator.mediaSession.setActionHandler('seekto', (details) => {
       if (details.seekTime !== undefined) {
@@ -353,11 +362,10 @@ function _setupMediaSession(){
       aa.currentTime = Math.max(aa.currentTime - (details.seekOffset || 10), 0);
       _updatePositionState();
     });
-  } catch(e) { /* navigateur ancien, on ignore */ }
+  } catch(e) {}
 }
 _setupMediaSession();
 
-/** Met à jour la position sur la barre de notif / écran verrouillé */
 function _updatePositionState(){
   if(!('mediaSession' in navigator)) return;
   const aa = _activeAudio();
@@ -371,34 +379,27 @@ function _updatePositionState(){
   } catch(e) {}
 }
 
-/** Met à jour les métadonnées (titre, artiste, pochette) dans la notif */
 const _origUpdatePlayerUI2 = updatePlayerUI;
 window.updatePlayerUI = function(t){
   _origUpdatePlayerUI2(t);
   if(!('mediaSession' in navigator)) return;
-
   navigator.mediaSession.playbackState = 'playing';
-
   const cover = t?.filename ? getCover(t.filename) : null;
-  // Multi-résolution pour Android (96) + iOS (192) + desktop (512)
   const artwork = cover ? [
     { src: cover.replace('600x600bb', '96x96bb'),  sizes: '96x96',   type: 'image/jpeg' },
     { src: cover.replace('600x600bb', '192x192bb'), sizes: '192x192', type: 'image/jpeg' },
     { src: cover,                                    sizes: '512x512', type: 'image/jpeg' },
   ] : [];
-
   navigator.mediaSession.metadata = new MediaMetadata({
     title:  t.title  || '',
     artist: t.artist || '',
     album:  t.album  || '',
     artwork,
   });
-
-  // Réinitialise la position à 0 (nouvelle piste)
   setTimeout(_updatePositionState, 200);
 };
 
-/* ─── Fallback polling : détecte la fin de piste si ended n'est pas déclenché ─── */
+/* Fallback polling fin de piste */
 setInterval(()=>{
   if (_xfading) return;
   const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
@@ -408,7 +409,6 @@ setInterval(()=>{
   }
 }, 1000);
 
-/* ─── visibilitychange : resync état play/pause quand on revient sur l'app ─── */
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState !== 'visible') return;
   const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
@@ -429,4 +429,3 @@ document.addEventListener('visibilitychange', ()=>{
     }
   }
 });
-
