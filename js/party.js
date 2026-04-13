@@ -6,9 +6,8 @@ function startParty(){
   if(partyMode === 'host'){ stopParty(); return; }
   if(partyMode === 'listener') leaveParty(true);
   partyMode = 'host';
-  // Update presence to signal we're hosting
   try{
-    ablyChannel.presence.update({ pseudo, track: currentId!=null?{title:tracks.find(t=>t.id===currentId)?.title,artist:tracks.find(t=>t.id===currentId)?.artist}:null, party:true });
+    ablyChannel.presence.update(_buildPresenceData());
   }catch(e){}
   broadcastPartySync();
   partySyncInt = setInterval(broadcastPartySync, 4000);
@@ -20,24 +19,34 @@ function stopParty(){
   clearInterval(partySyncInt);
   partySyncInt = null;
   try{ ablyChannel.publish('party_stop', { host: pseudo }); }catch(e){}
-  try{ ablyChannel.presence.update({ pseudo, track: currentId!=null?{title:tracks.find(t=>t.id===currentId)?.title,artist:tracks.find(t=>t.id===currentId)?.artist}:null, party:false }); }catch(e){}
+  try{ ablyChannel.presence.update(_buildPresenceData()); }catch(e){}
   partyMode = null;
   partyHost = null;
   updatePartyUI();
   toast('Mode Fête terminé');
 }
 
+let _partySubscribed = false;
+
 function joinParty(hostPseudo){
   if(!ablyClient){ toast('Connexion requise', true); return; }
   if(partyMode === 'host'){ toast('Arrêtez votre propre fête d\'abord', true); return; }
   if(partyMode === 'listener') leaveParty(true);
+
   partyMode = 'listener';
-  partyHost = hostPseudo;
-  // Subscribe to sync messages
+  partyHost = hostPseudo.trim();
+
+  // Dé-doublon : on unsubscribe d'abord, puis resubscribe
+  if (_partySubscribed) {
+    try{ ablyChannel.unsubscribe('party_sync', onPartySyncMsg); }catch(e){}
+    try{ ablyChannel.unsubscribe('party_stop', onPartyStopMsg); }catch(e){}
+  }
   try{
     ablyChannel.subscribe('party_sync', onPartySyncMsg);
     ablyChannel.subscribe('party_stop', onPartyStopMsg);
+    _partySubscribed = true;
   }catch(e){}
+
   updatePartyUI();
   toast(`🎉 Vous avez rejoint la fête de ${hostPseudo}`);
 }
@@ -47,6 +56,7 @@ function leaveParty(silent=false){
     ablyChannel.unsubscribe('party_sync', onPartySyncMsg);
     ablyChannel.unsubscribe('party_stop', onPartyStopMsg);
   }catch(e){}
+  _partySubscribed = false;
   partyMode = null;
   partyHost = null;
   updatePartyUI();
@@ -75,12 +85,15 @@ function broadcastPartySync(){
 }
 
 async function onPartySyncMsg(msg){
-  if(partyMode !== 'listener' || msg.data.host !== partyHost) return;
+  if(partyMode !== 'listener') return;
+  if((msg.data.host||'').trim() !== partyHost) return;
+
   const data = msg.data;
   const t = tracks.find(x => x.filename === data.filename);
   if(!t) return;
   const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
   const sh = activePlayer === 1 ? shaka1 : shaka2;
+
   if(currentId !== t.id){
     currentId = t.id;
     try { await sh.load(t.url); } catch(e) { console.warn('[Party sync] load error', e); return; }
@@ -92,25 +105,26 @@ async function onPartySyncMsg(msg){
   }
   if(data.isPlaying && activeAudio.paused){
     activeAudio.play().catch(async () => {
-      // Stream expiré après une longue pause → rechargement + seek
       try {
         await sh.load(t.url);
         activeAudio.currentTime = data.position;
         await activeAudio.play();
         updatePlayerUI(t);
-      } catch(e2) { console.warn('[Party sync] replay after reload error', e2); }
+      } catch(e2) { console.warn('[Party sync] replay error', e2); }
     });
-  } else if(!data.isPlaying && !activeAudio.paused) activeAudio.pause();
+  } else if(!data.isPlaying && !activeAudio.paused) {
+    activeAudio.pause();
+  }
 }
 
 function onPartyStopMsg(msg){
-  if(partyMode !== 'listener' || msg.data.host !== partyHost) return;
+  if(partyMode !== 'listener') return;
+  if((msg.data.host||'').trim() !== partyHost) return;
   leaveParty(true);
   toast(`${partyHost} a arrêté la fête`);
 }
 
 function updatePartyUI(){
-  // Party banner
   const banner = document.getElementById('partyBanner');
   const bannerText = document.getElementById('partyBannerText');
   if(partyMode === 'host'){
@@ -122,9 +136,7 @@ function updatePartyUI(){
   } else {
     banner.style.display = 'none';
   }
-  // Party dot in sidebar
   document.getElementById('partyDot').style.display = partyMode ? 'block' : 'none';
-  // Refresh party view if open
   const partyView = document.getElementById('view-party');
   if(partyView && partyView.classList.contains('active')) renderPartyView();
 }
@@ -132,8 +144,6 @@ function updatePartyUI(){
 function renderPartyView(){
   const content = document.getElementById('partyContent');
   const statusSub = document.getElementById('partyStatusSub');
-
-  // Find hosts in online users
   const hosts = Object.entries(onlineUsers).filter(([,u]) => u.party && u.pseudo !== pseudo);
 
   if(partyMode === 'host'){
@@ -164,13 +174,17 @@ function renderPartyView(){
     `;
   } else {
     statusSub.textContent = 'Synchronisez votre musique en temps réel';
+    const connectedMsg = !ablyChannel
+      ? '<div style="font-size:12px;color:var(--rose);margin-bottom:8px;">⚠️ Non connecté — entrez un pseudo pour vous connecter</div>'
+      : '';
     content.innerHTML = `
       <div class="party-hero">
         <div class="party-hero-ico">🎉</div>
         <div>
           <div class="party-hero-title">Mode Fête</div>
-          <div class="party-hero-sub">Démarrez une fête pour que d'autres participants<br>écoutent exactement la même musique que vous, en temps réel via Ably.</div>
-          <button class="btn btn-acc" onclick="startParty()" ${!ablyChannel?'disabled title="Connexion requise"':''}>🎉 Démarrer une fête</button>
+          <div class="party-hero-sub">Démarrez une fête pour que d'autres participants<br>écoutent exactement la même musique que vous, en temps réel.</div>
+          ${connectedMsg}
+          <button class="btn btn-acc" onclick="startParty()" ${!ablyChannel?'disabled':''}>${!ablyChannel?'🔌 Connexion requise':'🎉 Démarrer une fête'}</button>
         </div>
       </div>
       ${hosts.length ? `
@@ -206,4 +220,3 @@ function _renderPartyUsersList(){
     `).join('')}
   `;
 }
-
