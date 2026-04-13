@@ -628,3 +628,4 @@ document.getElementById('wolfPixel').addEventListener('click',()=>{
     }
   });
 })();
+
