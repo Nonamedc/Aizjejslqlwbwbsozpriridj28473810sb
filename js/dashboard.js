@@ -80,6 +80,13 @@ function renderDashboard(){
           <div class="dash-sc-sub">${h.length} lecture${h.length>1?'s':''}</div>
         </div>
       </div>
+      <div class="dash-sc" onclick="showView('leaderboard')">
+        <span class="dash-sc-ico">🏆</span>
+        <div>
+          <div class="dash-sc-label">Classement</div>
+          <div class="dash-sc-sub" id="lbDashSub">Voir le podium</div>
+        </div>
+      </div>
       <div class="dash-sc" onclick="showView('party')">
         <span class="dash-sc-ico">🎉</span>
         <div>
