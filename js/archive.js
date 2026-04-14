@@ -54,7 +54,7 @@ async function fetchArchive(){
     });
     filtered=[...tracks];
     applySort();
-    buildQueue();
+    if (typeof buildQueue === 'function') buildQueue();
     renderAll();
     updateCounts();
   }catch(e){
