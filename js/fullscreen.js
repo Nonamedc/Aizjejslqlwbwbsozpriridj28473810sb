@@ -225,12 +225,14 @@ window.showView = function(name){
   closeMoreSheet();
 };
 
-/* Patch updatePlayerUI */
-const _origUpdatePlayerUI = updatePlayerUI;
-window.updatePlayerUI = function(t){
-  _origUpdatePlayerUI(t);
-  if(_fsOpen) setTimeout(syncFsPlayer, 50);
-};
+/* Patch updatePlayerUI — différé au load pour éviter "not defined" si le fichier est chargé avant player.js */
+window.addEventListener('load', function () {
+  const _origUpdatePlayerUI = typeof updatePlayerUI === 'function' ? updatePlayerUI : null;
+  window.updatePlayerUI = function (t) {
+    if (_origUpdatePlayerUI) _origUpdatePlayerUI(t);
+    if (_fsOpen) setTimeout(syncFsPlayer, 50);
+  };
+});
 
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
