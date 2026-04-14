@@ -6,9 +6,21 @@ function startParty(){
   if(partyMode === 'host'){ stopParty(); return; }
   if(partyMode === 'listener') leaveParty(true);
   partyMode = 'host';
+
+  // Mise à jour présence → les autres voient party:true immédiatement
   try{
-    ablyChannel.presence.update(_buildPresenceData());
+    ablyChannel.presence.update({
+      pseudo,
+      track: currentId != null
+        ? { title: tracks.find(t=>t.id===currentId)?.title, artist: tracks.find(t=>t.id===currentId)?.artist }
+        : null,
+      party: true,
+    });
   }catch(e){}
+
+  // Écoute les demandes de sync immédiat (nouveaux listeners)
+  try{ ablyChannel.subscribe('party_request_sync', _onPartySyncRequest); }catch(e){}
+
   broadcastPartySync();
   partySyncInt = setInterval(broadcastPartySync, 4000);
   updatePartyUI();
@@ -19,44 +31,55 @@ function stopParty(){
   clearInterval(partySyncInt);
   partySyncInt = null;
   try{ ablyChannel.publish('party_stop', { host: pseudo }); }catch(e){}
-  try{ ablyChannel.presence.update(_buildPresenceData()); }catch(e){}
+  try{
+    ablyChannel.presence.update({
+      pseudo,
+      track: currentId != null
+        ? { title: tracks.find(t=>t.id===currentId)?.title, artist: tracks.find(t=>t.id===currentId)?.artist }
+        : null,
+      party: false,
+    });
+  }catch(e){}
+  try{ ablyChannel.unsubscribe('party_request_sync', _onPartySyncRequest); }catch(e){}
   partyMode = null;
   partyHost = null;
   updatePartyUI();
   toast('Mode Fête terminé');
 }
 
-let _partySubscribed = false;
+/* Répond à une demande de sync immédiat d'un listener qui vient de rejoindre */
+function _onPartySyncRequest(msg){
+  if(partyMode !== 'host') return;
+  if(msg.data.host !== pseudo)  return; // pas pour moi
+  broadcastPartySync();
+}
 
 function joinParty(hostPseudo){
   if(!ablyClient){ toast('Connexion requise', true); return; }
   if(partyMode === 'host'){ toast('Arrêtez votre propre fête d\'abord', true); return; }
   if(partyMode === 'listener') leaveParty(true);
-
   partyMode = 'listener';
-  partyHost = hostPseudo.trim();
+  partyHost = hostPseudo;
 
-  // Dé-doublon : on unsubscribe d'abord, puis resubscribe
-  if (_partySubscribed) {
-    try{ ablyChannel.unsubscribe('party_sync', onPartySyncMsg); }catch(e){}
-    try{ ablyChannel.unsubscribe('party_stop', onPartyStopMsg); }catch(e){}
-  }
   try{
     ablyChannel.subscribe('party_sync', onPartySyncMsg);
     ablyChannel.subscribe('party_stop', onPartyStopMsg);
-    _partySubscribed = true;
+  }catch(e){}
+
+  // Demande un sync immédiat sans attendre les 4s
+  try{
+    ablyChannel.publish('party_request_sync', { listener: pseudo, host: hostPseudo });
   }catch(e){}
 
   updatePartyUI();
   toast(`🎉 Vous avez rejoint la fête de ${hostPseudo}`);
 }
 
-function leaveParty(silent=false){
+function leaveParty(silent = false){
   try{
     ablyChannel.unsubscribe('party_sync', onPartySyncMsg);
     ablyChannel.unsubscribe('party_stop', onPartyStopMsg);
   }catch(e){}
-  _partySubscribed = false;
   partyMode = null;
   partyHost = null;
   updatePartyUI();
@@ -64,7 +87,7 @@ function leaveParty(silent=false){
 }
 
 function leaveOrStopParty(){
-  if(partyMode === 'host') stopParty();
+  if(partyMode === 'host')     stopParty();
   else if(partyMode === 'listener') leaveParty();
 }
 
@@ -74,25 +97,23 @@ function broadcastPartySync(){
   if(!t) return;
   try{
     ablyChannel.publish('party_sync', {
-      host: pseudo,
-      filename: t.filename,
-      position: audio.currentTime,
+      host:      pseudo,
+      filename:  t.filename,
+      position:  audio.currentTime,
       isPlaying: isPlaying,
-      title: t.title,
-      artist: t.artist,
+      title:     t.title,
+      artist:    t.artist,
     });
   }catch(e){}
 }
 
 async function onPartySyncMsg(msg){
-  if(partyMode !== 'listener') return;
-  if((msg.data.host||'').trim() !== partyHost) return;
-
+  if(partyMode !== 'listener' || msg.data.host !== partyHost) return;
   const data = msg.data;
   const t = tracks.find(x => x.filename === data.filename);
   if(!t) return;
   const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
-  const sh = activePlayer === 1 ? shaka1 : shaka2;
+  const sh          = activePlayer === 1 ? shaka1  : shaka2;
 
   if(currentId !== t.id){
     currentId = t.id;
@@ -105,27 +126,26 @@ async function onPartySyncMsg(msg){
   }
   if(data.isPlaying && activeAudio.paused){
     activeAudio.play().catch(async () => {
-      try {
+      try{
         await sh.load(t.url);
         activeAudio.currentTime = data.position;
         await activeAudio.play();
         updatePlayerUI(t);
-      } catch(e2) { console.warn('[Party sync] replay error', e2); }
+      }catch(e2){ console.warn('[Party sync] replay error', e2); }
     });
-  } else if(!data.isPlaying && !activeAudio.paused) {
+  } else if(!data.isPlaying && !activeAudio.paused){
     activeAudio.pause();
   }
 }
 
 function onPartyStopMsg(msg){
-  if(partyMode !== 'listener') return;
-  if((msg.data.host||'').trim() !== partyHost) return;
+  if(partyMode !== 'listener' || msg.data.host !== partyHost) return;
   leaveParty(true);
   toast(`${partyHost} a arrêté la fête`);
 }
 
 function updatePartyUI(){
-  const banner = document.getElementById('partyBanner');
+  const banner     = document.getElementById('partyBanner');
   const bannerText = document.getElementById('partyBannerText');
   if(partyMode === 'host'){
     banner.style.display = 'flex';
@@ -142,12 +162,14 @@ function updatePartyUI(){
 }
 
 function renderPartyView(){
-  const content = document.getElementById('partyContent');
+  const content   = document.getElementById('partyContent');
   const statusSub = document.getElementById('partyStatusSub');
-  const hosts = Object.entries(onlineUsers).filter(([,u]) => u.party && u.pseudo !== pseudo);
+
+  // Hôtes visibles dans onlineUsers (party:true, pas nous)
+  const hosts = Object.entries(onlineUsers).filter(([, u]) => u.party && u.pseudo !== pseudo);
 
   if(partyMode === 'host'){
-    statusSub.textContent = `Vous hébergez — ${Object.keys(onlineUsers).length} personne${Object.keys(onlineUsers).length>1?'s':''} en ligne`;
+    statusSub.textContent = `Vous hébergez — ${Object.keys(onlineUsers).length} personne${Object.keys(onlineUsers).length > 1 ? 's' : ''} en ligne`;
     content.innerHTML = `
       <div class="party-hero" style="border-color:rgba(196,77,110,.4);">
         <div class="party-hero-ico">🎉</div>
@@ -174,29 +196,26 @@ function renderPartyView(){
     `;
   } else {
     statusSub.textContent = 'Synchronisez votre musique en temps réel';
-    const connectedMsg = !ablyChannel
-      ? '<div style="font-size:12px;color:var(--rose);margin-bottom:8px;">⚠️ Non connecté — entrez un pseudo pour vous connecter</div>'
-      : '';
     content.innerHTML = `
       <div class="party-hero">
         <div class="party-hero-ico">🎉</div>
         <div>
           <div class="party-hero-title">Mode Fête</div>
-          <div class="party-hero-sub">Démarrez une fête pour que d'autres participants<br>écoutent exactement la même musique que vous, en temps réel.</div>
-          ${connectedMsg}
-          <button class="btn btn-acc" onclick="startParty()" ${!ablyChannel?'disabled':''}>${!ablyChannel?'🔌 Connexion requise':'🎉 Démarrer une fête'}</button>
+          <div class="party-hero-sub">Démarrez une fête pour que d'autres participants<br>écoutent exactement la même musique que vous, en temps réel via Ably.</div>
+          <button class="btn btn-acc" onclick="startParty()" ${!ablyChannel ? 'disabled title="Connexion requise"' : ''}>🎉 Démarrer une fête</button>
         </div>
       </div>
       ${hosts.length ? `
         <div class="party-users-title">Fêtes en cours</div>
-        ${hosts.map(([,u]) => `
+        ${hosts.map(([, u]) => `
           <div class="party-user-card">
             <div class="party-user-av hosting-av">${(u.pseudo||'?')[0].toUpperCase()}</div>
             <div style="flex:1;min-width:0;">
               <div class="party-user-name">${esc(u.pseudo)}</div>
-              <div class="party-user-track">${u.track?`🎵 ${esc(u.track.title)}`:'En attente…'}</div>
+              <div class="party-user-track">${u.track ? `🎵 ${esc(u.track.title)}` : 'En attente…'}</div>
             </div>
-            <button class="btn btn-acc" style="font-size:12px;padding:6px 14px;" onclick="joinParty('${escAttr(u.pseudo)}')">Rejoindre</button>
+            <button class="btn btn-acc" style="font-size:12px;padding:6px 14px;"
+              onclick="joinParty('${escAttr(u.pseudo)}')">Rejoindre</button>
           </div>
         `).join('')}
       ` : `<div class="party-empty">Aucune fête en cours<br><small style="color:var(--text3);">Soyez le premier à en démarrer une !</small></div>`}
@@ -209,12 +228,20 @@ function _renderPartyUsersList(){
   if(!entries.length) return '';
   return `
     <div class="party-users-title" style="margin-top:16px;">Personnes en ligne (${entries.length})</div>
-    ${entries.map(([,u]) => `
+    ${entries.map(([, u]) => `
       <div class="party-user-card">
-        <div class="party-user-av${u.party?' hosting-av':''}">${(u.pseudo||'?')[0].toUpperCase()}</div>
+        <div class="party-user-av${u.party ? ' hosting-av' : ''}">${(u.pseudo||'?')[0].toUpperCase()}</div>
         <div style="flex:1;min-width:0;">
-          <div class="party-user-name">${esc(u.pseudo)}${u.pseudo===pseudo?' <span style="font-size:10px;color:var(--accent);">(vous)</span>':''}${u.party?' 🎉':''}</div>
-          <div class="party-user-track">${u.track?`🎵 ${esc(u.track.title)} · ${esc(u.track.artist)}`:'<span style="color:var(--text3);">Inactif</span>'}</div>
+          <div class="party-user-name">
+            ${esc(u.pseudo)}
+            ${u.pseudo === pseudo ? '<span style="font-size:10px;color:var(--accent);"> (vous)</span>' : ''}
+            ${u.party ? ' 🎉' : ''}
+          </div>
+          <div class="party-user-track">
+            ${u.track
+              ? `🎵 ${esc(u.track.title)} · ${esc(u.track.artist)}`
+              : '<span style="color:var(--text3);">Inactif</span>'}
+          </div>
         </div>
       </div>
     `).join('')}
