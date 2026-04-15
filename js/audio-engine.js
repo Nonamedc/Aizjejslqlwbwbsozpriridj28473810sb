@@ -9,6 +9,7 @@ let activePlayer = 1;
 [_audio1, _audio2].forEach((el, i) => {
   el.style.display = 'none';
   el.preload = 'auto';
+  el.crossOrigin = 'anonymous';   // ← AJOUTER CETTE LIGNE
   el.volume = 0.8;
   el.setAttribute('playsinline', '');
   el.setAttribute('webkit-playsinline', '');
