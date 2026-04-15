@@ -324,4 +324,3 @@ function uploadFileToArchive(item, accessKey, secretKey){
     xhr.send(renamedFile);
   });
 }
-
