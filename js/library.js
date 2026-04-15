@@ -55,8 +55,6 @@ function renderFavorites(){
       <div class="tr-dur">
         <span class="dur-val">${fmtTime(t.length)}</span>
         <div class="tr-actions">
-          <button class="ico-btn fav-btn active" data-tid="${t.id}" onclick="toggleFavById(${t.id},event)" title="Retirer des favoris">♥</button>
-          <button class="ico-btn edit" onclick="event.stopPropagation();openEditor(${t.id})" title="Éditer">✏️</button>
         </div>
       </div>
     </div>
