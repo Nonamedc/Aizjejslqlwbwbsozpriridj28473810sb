@@ -40,8 +40,6 @@ function renderSongs(){
         <span class="dur-val">${fmtTime(t.length)}</span>
         <div class="tr-actions">
           <button class="ico-btn fav-btn${faved?' active':''}" data-tid="${t.id}" onclick="toggleFavById(${t.id},event)" title="${faved?'Retirer des favoris':'Ajouter aux favoris'}">${faved?'♥':'♡'}</button>
-          <button class="ico-btn" onclick="openAddToPlaylistSheet('${escAttr(t.filename)}',event)" title="Ajouter à une playlist">＋</button>
-          <button class="ico-btn edit" onclick="event.stopPropagation();openEditor(${t.id})" title="Éditer">✏️</button>
         </div>
       </div>
     </div>
@@ -151,7 +149,6 @@ function showDetail(type,name){
         <span class="dur-val">${fmtTime(t.length)}</span>
         <div class="tr-actions">
           <button class="ico-btn fav-btn${faved?' active':''}" data-tid="${t.id}" onclick="toggleFavById(${t.id},event)" title="${faved?'Retirer':'Ajouter'}">${faved?'♥':'♡'}</button>
-          <button class="ico-btn edit" onclick="event.stopPropagation();openEditor(${t.id})" title="Éditer">✏️</button>
         </div>
       </div>
     </div>
@@ -337,4 +334,3 @@ function onSearch(){
     }
   }
 }
-
