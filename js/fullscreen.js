@@ -131,12 +131,27 @@ document.addEventListener('keydown', e => {
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea') return;
 
-  // 'f' ou Enter sur l'artwork → ouvre/ferme le lecteur plein écran
+  // Espace → play/pause
+  if (e.key === ' ') {
+    e.preventDefault();
+    togglePlay();
+    return;
+  }
+
+  // 'f' ou 'F' → ouvre/ferme le lecteur plein écran
   if (e.key === 'f' || e.key === 'F') {
     e.preventDefault();
     if (_fsOpen) closeFsPlayer(); else openFsPlayer();
     return;
   }
+
+  // 'e' ou 'E' → ouvre l'égaliseur
+  if (e.key === 'e' || e.key === 'E') {
+    e.preventDefault();
+    showView('eq');
+    return;
+  }
+
   // Échap → ferme le plein écran
   if (e.key === 'Escape' && _fsOpen) {
     closeFsPlayer();
@@ -147,7 +162,7 @@ document.addEventListener('keydown', e => {
 /* ══════════════════════════════════════════════
    MORE BOTTOM SHEET
 ══════════════════════════════════════════════ */
-const MORE_VIEWS = ['stats','party','history','online','editor','upload','playlists','data','leaderboard'];
+const MORE_VIEWS = ['stats','party','history','online','editor','upload','playlists','data','leaderboard','eq'];
 
 function openMoreSheet(){
   document.getElementById('moreBackdrop').classList.add('open');
@@ -215,6 +230,7 @@ window.showView = function(name){
   _origShowView(name);
   if(name === 'playlists') renderPlaylists();
   if(name === 'leaderboard') renderLeaderboard();
+  if(name === 'eq') renderEqPanel('eq-panel-container');
   const mainViews = ['dashboard','songs','favorites','albums','artists'];
   const mnMore = document.getElementById('mnMoreBtn');
   if(mnMore){
