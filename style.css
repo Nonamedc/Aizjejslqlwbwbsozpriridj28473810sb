@@ -24,6 +24,22 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 
+.player {
+  background: var(--arya-player-bg) !important;
+  transition: background 0.3s ease;
+}
+
+.p-title, .p-artist, .p-time, .p-btn {
+  color: var(--arya-player-text) !important;
+}
+
+.p-fill {
+  background: var(--arya-player-accent) !important;
+}
+
+.vol-slider::-webkit-slider-thumb {
+  background: var(--arya-player-accent) !important;
+}
 body {
   font-family:'Outfit',sans-serif;
   background:var(--bg);
