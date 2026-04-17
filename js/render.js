@@ -9,6 +9,7 @@ function renderAll(){
   renderFavorites();
   renderHistory();
   renderDashboard();
+  initBulkEdit(); 
   if(typeof renderPlaylists === 'function') renderPlaylists();
 }
 
