@@ -1,75 +1,197 @@
-/* ═══════════════════════════════════════════
-   PARSE FILENAME → metadata
-═══════════════════════════════════════════ */
-function parseFilename(fn){
-  let name = fn.replace(/\.(mp3|flac|ogg|wav|m4a)$/i,'').replace(/_/g,' ').trim();
+/* ═══════════════════════════════════════════════════════════
+   ARCHIVE.JS — Arya V3
+   Récupération de la bibliothèque depuis Archive.org
+   et parsing des noms de fichiers en métadonnées.
 
-  // Retire les numéros de piste en début : "01 - ", "1. ", "01. ", "Track 01 - "
-  name = name.replace(/^(?:track\s*)?(\d{1,3})[\.\-\s]+/i, '');
+   Dépend de : config.js, utils.js, render.js, library.js
+═══════════════════════════════════════════════════════════ */
 
-  let title = name, artist = 'Inconnu', album = 'Sans album', year = '', genre = '';
+const AUDIO_EXT = /\.(mp3|flac|ogg|wav|m4a)$/i;
+const YEAR_RX   = /[\(\[]((?:19|20)\d{2})[\)\]]/;
+const TRACK_RX  = /^(?:track\s*)?(\d{1,3})[\.\-\s]+/i;
+const FEAT_RX   = /\s*[\(\[](feat|ft|with|avec)\.?\s[^\)\]]+[\)\]]/i;
 
-  const parts = name.split(/\s*-\s*/).map(p => p.trim()).filter(Boolean);
-  if(parts.length >= 3){ artist = parts[0]; album = parts[1]; title = parts.slice(2).join(' - '); }
-  else if(parts.length === 2){ artist = parts[0]; title = parts[1]; }
-  else { title = parts[0] || name; }
+const CACHE_KEY = `arya:archive:raw:${ARCHIVE_ID}`;
+const CACHE_TTL = 1000 * 60 * 10; // 10 min
 
-  // Extrait l'année entre parenthèses ou crochets : (2003) ou [2003]
-  const ym = title.match(/[\(\[]((?:19|20)\d{2})[\)\]]/);
-  if(ym){ year = ym[1]; title = title.replace(ym[0],'').trim(); }
 
-  // Retire les mentions feat. du titre (nettoyage)
-  title = title.replace(/\s*[\(\[](feat|ft|with|avec)\.?\s[^\)\]]+[\)\]]/i,'').trim();
+/* ═══════════════════════════════════════════════════════════
+   NORMALIZE
+═══════════════════════════════════════════════════════════ */
+function normalize(str) {
+  return str
+    .normalize('NFKC')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   PARSER
+═══════════════════════════════════════════════════════════ */
+function parseFilename(fn) {
+  let name = normalize(fn.replace(AUDIO_EXT, ''));
+
+  name = name.replace(TRACK_RX, '');
+
+  let title  = name;
+  let artist = 'Inconnu';
+  let album  = 'Sans album';
+  let year   = '';
+  let genre  = '';
+
+  const yearMatch = name.match(YEAR_RX);
+  if (yearMatch) {
+    year = yearMatch[1];
+    name = name.replace(yearMatch[0], '').trim();
+  }
+
+  const parts = name.split(/\s*-\s*/);
+
+  if (parts.length >= 3) {
+    artist = parts[0];
+    album  = parts[1];
+    title  = parts.slice(2).join(' - ');
+  } else if (parts.length === 2) {
+    artist = parts[0];
+    title  = parts[1];
+  } else {
+    title = parts[0];
+  }
+
+  title = title.replace(FEAT_RX, '').trim();
 
   return { title, artist, album, year, genre };
 }
 
-/* ═══════════════════════════════════════════
-   FETCH ARCHIVE.ORG
-═══════════════════════════════════════════ */
-async function fetchArchive(){
-  try{
-    const res=await fetch(`https://archive.org/metadata/${ARCHIVE_ID}`);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data=await res.json();
-    const audioRx=/\.(mp3|flac|ogg|wav|m4a)$/i;
-    const files=(data.files||[]).filter(f=>audioRx.test(f.name)&&!f.name.includes('/'));
-    const meta=getMeta();
-    tracks=files.map((f,i)=>{
-      const saved=meta[f.name]||{};
-      const parsed=parseFilename(f.name);
-      return{
-        id:i,
-        filename:f.name,
-        url:`https://archive.org/download/${ARCHIVE_ID}/${encodeURIComponent(f.name)}`,
-        title:saved.title||parsed.title,
-        artist:saved.artist||parsed.artist,
-        album:saved.album||parsed.album,
-        year:saved.year||parsed.year,
-        genre:saved.genre||parsed.genre,
-        length:f.length||0,
-        size:f.size||0,
-        ...(saved.deezerUrl ? {deezerUrl: saved.deezerUrl} : {}),
-      };
-    });
-    filtered=[...tracks];
-    applySort();
-    if (typeof buildQueue === 'function') buildQueue();
-    renderAll();
-    updateCounts();
-  }catch(e){
-    console.error(e);
-    const isNetwork = e instanceof TypeError && e.message.includes('fetch');
-    document.getElementById('trackList').innerHTML=`<div style="color:var(--text2);padding:48px;text-align:center;">${isNetwork?'📡':'❌'} ${isNetwork?'Impossible de joindre Archive.org.<br><small style="color:var(--text3);">Vérifiez votre connexion internet.</small>':'Impossible de charger la bibliothèque.<br><small style="color:var(--text3);">' + e.message + '</small>'}</div>`;
-    toast(isNetwork ? '📡 Connexion impossible' : 'Erreur de chargement', true);
+
+/* ═══════════════════════════════════════════════════════════
+   CACHE RAW
+═══════════════════════════════════════════════════════════ */
+function getCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+    if (!c) return null;
+    if (Date.now() - c.time > CACHE_TTL) return null;
+    return c.data;
+  } catch {
+    return null;
   }
 }
 
-function updateCounts(){
-  const albs=getAlbums(), arts=getArtists();
-  document.getElementById('songCount').textContent=`${tracks.length} chanson${tracks.length>1?'s':''}`;
-  document.getElementById('albumCount').textContent=`${albs.length} album${albs.length>1?'s':''}`;
-  document.getElementById('artistCount').textContent=`${arts.length} artiste${arts.length>1?'s':''}`;
-  updateFavBadge();
+function setCache(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      time: Date.now(),
+      data
+    }));
+  } catch {}
 }
 
+
+/* ═══════════════════════════════════════════════════════════
+   FETCH
+═══════════════════════════════════════════════════════════ */
+async function fetchArchive() {
+  try {
+    let data = getCache();
+
+    if (!data) {
+      const res = await fetch(`https://archive.org/metadata/${ARCHIVE_ID}`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      data = await res.json();
+      setCache(data);
+    }
+
+    const files = (data.files || []).filter(f =>
+      AUDIO_EXT.test(f.name) && !f.name.includes('/')
+    );
+
+    const meta = getMeta();
+
+    tracks = files.map((f, i) => {
+      const saved  = meta[f.name] || {};
+      const parsed = parseFilename(f.name); // toujours défini → zéro crash
+
+      return {
+        id:       i,
+        filename: f.name,
+        url:      `https://archive.org/download/${ARCHIVE_ID}/${encodeURIComponent(f.name)}`,
+        title:    saved.title  || parsed.title,
+        artist:   saved.artist || parsed.artist,
+        album:    saved.album  || parsed.album,
+        year:     saved.year   || parsed.year,
+        genre:    saved.genre  || parsed.genre,
+        length:   f.length || 0,
+        size:     f.size   || 0,
+        ...(saved.deezerUrl && { deezerUrl: saved.deezerUrl })
+      };
+    });
+
+    afterLoad();
+
+  } catch (e) {
+    console.error('[Arya Archive]', e);
+    showError(e);
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   POST LOAD
+═══════════════════════════════════════════════════════════ */
+function afterLoad() {
+  filtered = tracks.slice();
+
+  applySort();
+  buildQueue?.();
+  renderAll();
+  updateCounts();
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   ERROR UI
+═══════════════════════════════════════════════════════════ */
+function showError(e) {
+  const isNetwork =
+    e instanceof TypeError &&
+    e.message &&
+    e.message.toLowerCase().includes('fetch');
+
+  const el = document.getElementById('trackList');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div style="color:var(--text2);padding:48px;text-align:center;">
+      ${isNetwork
+        ? '📡 Connexion impossible'
+        : '❌ ' + esc(e.message)}
+    </div>
+  `;
+
+  toast(isNetwork ? 'Connexion impossible' : 'Erreur chargement', true);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   COUNTS
+═══════════════════════════════════════════════════════════ */
+function updateCounts() {
+  const s = tracks.length;
+  const a = getAlbums().length;
+  const r = getArtists().length;
+
+  const set = (id, val, label) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = `${val} ${label}${val > 1 ? 's' : ''}`;
+  };
+
+  set('songCount',   s, 'chanson');
+  set('albumCount',  a, 'album');
+  set('artistCount', r, 'artiste');
+
+  updateFavBadge();
+}
