@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   LYRICS.JS — Arya v2
+   LYRICS.JS — Arya
    Paroles synchronisées (LRC) et plain text.
 
    Sources en cascade :
