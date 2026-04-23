@@ -1,259 +1,299 @@
-/* ══════════════════════════════════════════════
-   WAKE LOCK — empêche la mise en veille
-══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   FULLSCREEN.JS — Arya v2
+   Wake Lock, lecteur plein écran, swipe, raccourcis clavier,
+   bottom sheet "More", Service Worker.
+
+   Dépend de : config.js, utils.js, playback.js, ui.js
+═══════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════
+   DÉTECTION DEVICE TACTILE
+   ⚠️  Doit être déclaré AVANT openFsPlayerIfMobile()
+       pour éviter la Temporal Dead Zone (const hoisting).
+═══════════════════════════════════════════════════════════ */
+const _touchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+
+/* ═══════════════════════════════════════════════════════════
+   WAKE LOCK — empêche la mise en veille pendant la lecture
+═══════════════════════════════════════════════════════════ */
+
 let _wakeLock = null;
 
 async function requestWakeLock() {
-  if (_wakeLock) return; // déjà actif
+  if (_wakeLock) return;
   if (!('wakeLock' in navigator)) return;
   try {
     _wakeLock = await navigator.wakeLock.request('screen');
     _wakeLock.addEventListener('release', () => {
       _wakeLock = null;
-      // Re-acquiert automatiquement si la lecture est en cours (ex: onglet redevenu visible)
+      // Ré-acquiert automatiquement si la lecture est toujours en cours
       if (isPlaying) requestWakeLock();
     });
-    console.log('[Arya] 🔆 Wake Lock actif');
   } catch (e) {
-    // Pas un problème bloquant — l'appli fonctionne sans
-    console.warn('[Arya] Wake Lock non disponible :', e.message);
+    console.warn('[Arya WakeLock] Non disponible :', e.message);
   }
 }
 
 async function releaseWakeLock() {
   if (!_wakeLock) return;
-  try { await _wakeLock.release(); } catch(e) {}
+  try { await _wakeLock.release(); } catch {}
   _wakeLock = null;
-  console.log('[Arya] 🔅 Wake Lock libéré');
 }
 
-// Ré-acquiert le Wake Lock quand l'onglet/l'app redevient visible
+// Ré-acquiert quand l'onglet redevient visible (pas de release en arrière-plan
+// pour ne pas couper la lecture audio)
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && isPlaying) {
-    requestWakeLock();
-  } else if (document.visibilityState === 'hidden') {
-    // Ne libère pas — l'audio doit continuer en arrière-plan
-  }
+  if (document.visibilityState === 'visible' && isPlaying) requestWakeLock();
 });
 
-/* ══════════════════════════════════════════════
-   FULL-SCREEN PLAYER
-══════════════════════════════════════════════ */
 
-function openFsPlayerIfMobile(){
-  // Accessible depuis mobile ET TV (clavier distant)
-  // Sur desktop classique on l'ignore (sauf raccourci clavier)
-  if(window.innerWidth > 1280 && !_touchDevice) return;
+/* ═══════════════════════════════════════════════════════════
+   LECTEUR PLEIN ÉCRAN
+═══════════════════════════════════════════════════════════ */
+
+function openFsPlayerIfMobile() {
+  // Ouverture automatique sur mobile / TV, ignoré sur desktop
+  if (window.innerWidth > 1280 && !_touchDevice) return;
   openFsPlayer();
 }
 
-// Détection device tactile/TV
-const _touchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
-function openFsPlayer(){
+function openFsPlayer() {
   _fsOpen = true;
-  const fs = document.getElementById('fsPlayer');
-  fs.classList.add('open');
-  syncFsPlayer();
+  document.getElementById('fsPlayer').classList.add('open');
   document.body.style.overflow = 'hidden';
+  syncFsPlayer();
   history.pushState({ arya: 'fsPlayer' }, '');
 }
 
-function closeFsPlayer(){
+function closeFsPlayer() {
   _fsOpen = false;
   document.getElementById('fsPlayer').classList.remove('open');
   document.body.style.overflow = '';
-  if(history.state && history.state.arya === 'fsPlayer') history.back();
+  if (history.state?.arya === 'fsPlayer') history.back();
 }
 
-function syncFsPlayer(){
-  if(!_fsOpen) return;
+function syncFsPlayer() {
+  if (!_fsOpen) return;
+
+  // Copie la pochette depuis le mini-player
   const srcArt = document.getElementById('pArt');
-  const fsArt = document.getElementById('fsArt');
+  const fsArt  = document.getElementById('fsArt');
   fsArt.style.background = srcArt.style.background;
-  fsArt.innerHTML = srcArt.innerHTML;
-  if(isPlaying) fsArt.classList.add('playing-pulse');
-  else fsArt.classList.remove('playing-pulse');
-  document.getElementById('fsTitle').textContent = document.getElementById('pTitle').textContent;
+  fsArt.innerHTML        = srcArt.innerHTML;
+  fsArt.classList.toggle('playing-pulse', isPlaying);
+
+  // Texte
+  document.getElementById('fsTitle').textContent  = document.getElementById('pTitle').textContent;
   document.getElementById('fsArtist').textContent = document.getElementById('pArtist').textContent;
-  document.getElementById('fsFill').style.width = document.getElementById('pFill').style.width;
-  document.getElementById('fsElapsed').textContent = document.getElementById('pElapsed').textContent;
-  document.getElementById('fsDur').textContent = document.getElementById('pDur').textContent;
+
+  // Barre de progression
+  document.getElementById('fsFill').style.width      = document.getElementById('pFill').style.width;
+  document.getElementById('fsElapsed').textContent   = document.getElementById('pElapsed').textContent;
+  document.getElementById('fsDur').textContent        = document.getElementById('pDur').textContent;
+
+  // Boutons
   document.getElementById('fsBtnPlay').textContent = isPlaying ? '⏸' : '▶';
   document.getElementById('fsBtnShuffle').classList.toggle('on', shuffle);
+
   const rb = document.getElementById('fsBtnRepeat');
-  rb.textContent = repeat===2 ? '⟳' : '↺';
-  rb.classList.toggle('on', repeat > 0);
-  rb.classList.toggle('rose', repeat === 2);
-  document.getElementById('fsVolSlider').value = Math.round(audio.volume * 100);
-  document.getElementById('fsVolIco').textContent = audio.volume===0?'🔇':audio.volume<0.5?'🔉':'🔊';
+  rb.textContent = repeat === REPEAT.ONE ? '⟳' : '↺';
+  rb.classList.toggle('on',   repeat > REPEAT.OFF);
+  rb.classList.toggle('rose', repeat === REPEAT.ONE);
+
+  // Volume
+  document.getElementById('fsVolSlider').value    = Math.round(audio.volume * 100);
+  document.getElementById('fsVolIco').textContent = audio.volume === 0 ? '🔇' : audio.volume < 0.5 ? '🔉' : '🔊';
 }
 
-function fsSeekTo(e){
-  if(partyMode === 'listener') return;
-  const r = e.currentTarget.getBoundingClientRect();
-  const pct = (e.clientX - r.left) / r.width;
+function fsSeekTo(e) {
+  if (partyMode === 'listener') return;
+  const r           = e.currentTarget.getBoundingClientRect();
+  const pct         = (e.clientX - r.left) / r.width;
   const activeAudio = activePlayer === 1 ? _audio1 : _audio2;
-  if(activeAudio.duration) activeAudio.currentTime = Math.max(0, Math.min(pct * activeAudio.duration, activeAudio.duration));
+  if (activeAudio.duration) {
+    activeAudio.currentTime = Math.max(0, Math.min(pct * activeAudio.duration, activeAudio.duration));
+  }
 }
 
-function setVolFs(v){
+function setVolFs(v) {
   setVol(v);
-  document.getElementById('fsVolIco').textContent = v==0?'🔇':v<50?'🔉':'🔊';
+  document.getElementById('fsVolIco').textContent = v === 0 ? '🔇' : v < 50 ? '🔉' : '🔊';
   document.getElementById('volSlider').value = v;
 }
 
-/* ══════════════════════════════════════════════
-   SWIPE GESTURES
-══════════════════════════════════════════════ */
-(function initSwipe(){
-  let _sx=0, _sy=0;
 
-  function onTouchStart(e){ _sx = e.touches[0].clientX; _sy = e.touches[0].clientY; }
-  function onTouchEnd(e){
+/* ═══════════════════════════════════════════════════════════
+   SWIPE — piste suivante / précédente
+═══════════════════════════════════════════════════════════ */
+
+(function _initSwipe() {
+  let _sx = 0, _sy = 0;
+  const onTouchStart = e => { _sx = e.touches[0].clientX; _sy = e.touches[0].clientY; };
+  const onTouchEnd   = e => {
     const dx = e.changedTouches[0].clientX - _sx;
     const dy = e.changedTouches[0].clientY - _sy;
-    if(Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    if(dx < 0) nextTrack();
-    else prevTrack();
-  }
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    dx < 0 ? nextTrack() : prevTrack();
+  };
+  const opts = { passive: true };
 
-  const player = document.querySelector('.player');
-  const fsArt = document.getElementById('fsArt');
-  if(player){ player.addEventListener('touchstart', onTouchStart, {passive:true}); player.addEventListener('touchend', onTouchEnd, {passive:true}); }
-  if(fsArt){ fsArt.addEventListener('touchstart', onTouchStart, {passive:true}); fsArt.addEventListener('touchend', onTouchEnd, {passive:true}); }
+  ['.player', '#fsArt'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    el.addEventListener('touchstart', onTouchStart, opts);
+    el.addEventListener('touchend',   onTouchEnd,   opts);
+  });
 })();
 
-/* ══════════════════════════════════════════════
+
+/* ═══════════════════════════════════════════════════════════
    RACCOURCIS CLAVIER — TV / Desktop
-══════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════ */
+
 document.addEventListener('keydown', e => {
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea') return;
 
-  // Espace → play/pause
-  if (e.key === ' ') {
-    e.preventDefault();
-    togglePlay();
-    return;
-  }
-
-  // 'f' ou 'F' → ouvre/ferme le lecteur plein écran
-  if (e.key === 'f' || e.key === 'F') {
-    e.preventDefault();
-    if (_fsOpen) closeFsPlayer(); else openFsPlayer();
-    return;
-  }
-
-  // 'e' ou 'E' → ouvre l'égaliseur
-  if (e.key === 'e' || e.key === 'E') {
-    e.preventDefault();
-    showView('eq');
-    return;
-  }
-
-  // Échap → ferme le plein écran
-  if (e.key === 'Escape' && _fsOpen) {
-    closeFsPlayer();
-    return;
+  switch (e.key) {
+    case ' ':
+      e.preventDefault();
+      togglePlay();
+      break;
+    case 'f': case 'F':
+      e.preventDefault();
+      _fsOpen ? closeFsPlayer() : openFsPlayer();
+      break;
+    case 'e': case 'E':
+      e.preventDefault();
+      showView('eq');
+      break;
+    case 'Escape':
+      if (_fsOpen) closeFsPlayer();
+      break;
   }
 });
 
-/* ══════════════════════════════════════════════
-   MORE BOTTOM SHEET
-══════════════════════════════════════════════ */
-const MORE_VIEWS = ['stats','party','history','online','editor','upload','playlists','data','leaderboard','eq'];
 
-function openMoreSheet(){
+/* ═══════════════════════════════════════════════════════════
+   MORE BOTTOM SHEET
+═══════════════════════════════════════════════════════════ */
+
+const MORE_VIEWS = ['stats', 'party', 'history', 'online', 'editor', 'upload', 'playlists', 'data', 'leaderboard', 'eq'];
+
+function openMoreSheet() {
   document.getElementById('moreBackdrop').classList.add('open');
   document.getElementById('moreSheet').classList.add('open');
-  const cur = document.querySelector('.view.active')?.id?.replace('view-','') || '';
-  MORE_VIEWS.forEach(v=>{
-    const el = document.querySelector(`#more${v.charAt(0).toUpperCase()+v.slice(1)}`);
-    if(el) el.classList.toggle('active', v === cur);
+  const cur = document.querySelector('.view.active')?.id?.replace('view-', '') || '';
+  MORE_VIEWS.forEach(v => {
+    const el = document.getElementById('more' + v.charAt(0).toUpperCase() + v.slice(1));
+    if (el) el.classList.toggle('active', v === cur);
   });
   history.pushState({ arya: 'moreSheet' }, '');
 }
 
-function closeMoreSheet(){
-  const wasOpen = document.getElementById('moreSheet').classList.contains('open');
+function closeMoreSheet() {
+  const sheet   = document.getElementById('moreSheet');
+  const wasOpen = sheet.classList.contains('open');
   document.getElementById('moreBackdrop').classList.remove('open');
-  document.getElementById('moreSheet').classList.remove('open');
-  if(wasOpen && history.state && history.state.arya === 'moreSheet') history.back();
+  sheet.classList.remove('open');
+  if (wasOpen && history.state?.arya === 'moreSheet') history.back();
 }
 
-/* ── Bouton retour physique ── */
-window.addEventListener('popstate', function(e){
-  if(document.getElementById('tpSheet')?.classList.contains('open')){
-    document.getElementById('tpBackdrop').classList.remove('open');
-    document.getElementById('tpSheet').classList.remove('open');
+function showViewFromMore(name) {
+  closeMoreSheet();
+  showView(name);
+  document.getElementById('mnMoreBtn')?.classList.add('active');
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   BOUTON RETOUR PHYSIQUE (Android / iOS)
+   Ferme les sheets dans l'ordre de priorité.
+═══════════════════════════════════════════════════════════ */
+
+window.addEventListener('popstate', () => {
+  // Sheets prioritaires — fermées dans l'ordre
+  const sheets = [
+    { sheet: 'tpSheet',      backdrop: 'tpBackdrop'        },
+    { sheet: 'plSheet',      backdrop: 'plSheetBackdrop'    },
+    { sheet: 'itunesSheet',  backdrop: 'itunesBackdrop'     },
+    { sheet: 'moreSheet',    backdrop: 'moreBackdrop'       },
+  ];
+
+  for (const { sheet, backdrop } of sheets) {
+    const el = document.getElementById(sheet);
+    if (el?.classList.contains('open')) {
+      document.getElementById(backdrop)?.classList.remove('open');
+      el.classList.remove('open');
+      return;
+    }
+  }
+
+  // Sidebar
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar?.classList.contains('open')) {
+    sidebar.classList.remove('open');
+    document.getElementById('sidebarBackdrop')?.classList.remove('open');
     return;
   }
-  if(document.getElementById('plSheet')?.classList.contains('open')){
-    document.getElementById('plSheetBackdrop').classList.remove('open');
-    document.getElementById('plSheet').classList.remove('open');
-    return;
-  }
-  if(document.getElementById('itunesSheet')?.classList.contains('open')){
-    document.getElementById('itunesBackdrop').classList.remove('open');
-    document.getElementById('itunesSheet').classList.remove('open');
-    return;
-  }
-  if(document.querySelector('.sidebar')?.classList.contains('open')){
-    document.querySelector('.sidebar').classList.remove('open');
-    document.getElementById('sidebarBackdrop').classList.remove('open');
-    return;
-  }
-  if(_fsOpen){
+
+  // Lecteur plein écran
+  if (_fsOpen) {
     _fsOpen = false;
     document.getElementById('fsPlayer').classList.remove('open');
     document.body.style.overflow = '';
-    return;
-  }
-  if(document.getElementById('moreSheet').classList.contains('open')){
-    document.getElementById('moreBackdrop').classList.remove('open');
-    document.getElementById('moreSheet').classList.remove('open');
-    return;
   }
 });
 
-function showViewFromMore(name){
-  closeMoreSheet();
-  showView(name);
-  const mnMore = document.getElementById('mnMoreBtn');
-  if(mnMore) mnMore.classList.add('active');
-}
 
-/* Patch showView */
+/* ═══════════════════════════════════════════════════════════
+   PATCH showView
+   Branche les rendus lazy et gère le badge "More".
+═══════════════════════════════════════════════════════════ */
+
 const _origShowView = showView;
-window.showView = function(name){
+window.showView = function (name) {
   _origShowView(name);
-  if(name === 'playlists') renderPlaylists();
-  if(name === 'leaderboard') renderLeaderboard();
-  if(name === 'eq') renderEqPanel('eq-panel-container');
-  const mainViews = ['dashboard','songs','favorites','albums','artists'];
-  const mnMore = document.getElementById('mnMoreBtn');
-  if(mnMore){
-    if(mainViews.includes(name)) mnMore.classList.remove('active');
-    else if(MORE_VIEWS.includes(name)) mnMore.classList.add('active');
+  if (name === 'playlists')   renderPlaylists();
+  if (name === 'leaderboard') renderLeaderboard();
+  if (name === 'eq')          renderEqPanel('eq-panel-container');
+
+  const mainViews = ['dashboard', 'songs', 'favorites', 'albums', 'artists'];
+  const mnMore    = document.getElementById('mnMoreBtn');
+  if (mnMore) {
+    if (mainViews.includes(name))  mnMore.classList.remove('active');
+    else if (MORE_VIEWS.includes(name)) mnMore.classList.add('active');
   }
-  if(_fsOpen) syncFsPlayer();
+
+  if (_fsOpen) syncFsPlayer();
   closeMoreSheet();
 };
 
-/* Patch updatePlayerUI — différé au load pour éviter "not defined" si le fichier est chargé avant player.js */
-window.addEventListener('load', function () {
-  const _origUpdatePlayerUI = typeof updatePlayerUI === 'function' ? updatePlayerUI : null;
+
+/* ═══════════════════════════════════════════════════════════
+   PATCH updatePlayerUI — sync FS si ouvert
+   Différé au load pour éviter les conflits d'ordre de
+   chargement des scripts.
+═══════════════════════════════════════════════════════════ */
+
+window.addEventListener('load', () => {
+  const _prevUpdateUI = typeof updatePlayerUI === 'function' ? updatePlayerUI : null;
   window.updatePlayerUI = function (t) {
-    if (_origUpdatePlayerUI) _origUpdatePlayerUI(t);
+    if (_prevUpdateUI) _prevUpdateUI(t);
     if (_fsOpen) setTimeout(syncFsPlayer, 50);
   };
 });
 
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("./sw.js")
-      .then(r=>console.log("[Arya PWA] SW enregistré",r.scope))
-      .catch(e=>console.warn("[Arya PWA] SW échoué",e));
+
+/* ═══════════════════════════════════════════════════════════
+   SERVICE WORKER — PWA
+═══════════════════════════════════════════════════════════ */
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .catch(e => console.warn('[Arya PWA] Service Worker échoué :', e));
   });
 }
