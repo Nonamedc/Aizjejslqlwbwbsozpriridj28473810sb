@@ -1,14 +1,29 @@
-/* ═══════════════════════════════════════════
-   EQ / WEB AUDIO ENGINE — Arya v5
-   Chargé après audio-engine.js
-   Variables globales exposées :
-     setEqBand(idx, db), applyEqPreset(name),
-     resetEq(), toggleNormalization(bool),
-     setPlaybackRate(rate), renderEqPanel()
-═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   EQ / WEB AUDIO ENGINE — Arya V6
+   Chargé après audio-engine.js.
 
-/* ─── État interne ─── */
+   API publique :
+     setEqBand(idx, db)       — règle une bande (0-4)
+     applyEqPreset(name)      — applique un preset
+     resetEq()                — remet tout à 0 dB
+     toggleNormalization(bool)— active/désactive le compresseur
+     setPlaybackRate(rate)    — vitesse de lecture (0.5 → 2)
+     cyclePlaybackRate()      — passe à la vitesse suivante
+     renderEqPanel()          — sync l'UI du panneau EQ
+═══════════════════════════════════════════════════════════ */
 
+
+/* ─────────────────────────────────────────
+   CLÉS LOCALSTORAGE
+───────────────────────────────────────── */
+const LS_EQ_BANDS = 'arya_eq_bands';
+const LS_EQ_NORM  = 'arya_eq_norm';
+const LS_EQ_RATE  = 'arya_eq_rate';
+
+
+/* ─────────────────────────────────────────
+   ÉTAT INTERNE
+───────────────────────────────────────── */
 let _audioCtx      = null;
 let _gain1         = null;
 let _gain2         = null;
@@ -18,57 +33,59 @@ let _compressor    = null;
 let _normEnabled   = false;
 let _webAudioReady = false;
 let _currentRate   = 1;
-let _eqValues      = [0, 0, 0, 0, 0]; // valeurs courantes des 5 bandes
+let _eqValues      = [0, 0, 0, 0, 0]; // gains courants des 5 bandes (dB)
 
-/* ─── Clés localStorage ─── */
-const LS_EQ_BANDS  = 'mugiwara_eq_bands';
-const LS_EQ_NORM   = 'mugiwara_eq_norm';
-const LS_EQ_RATE   = 'mugiwara_eq_rate';
 
-/* ─── Charge les préférences sauvegardées ─── */
+/* ─────────────────────────────────────────
+   CHARGEMENT DES PRÉFÉRENCES
+───────────────────────────────────────── */
 (function _loadEqPrefs() {
   try {
-    const saved = localStorage.getItem(LS_EQ_BANDS);
-    if (saved) {
-      const parsed = JSON.parse(saved);
+    const savedBands = localStorage.getItem(LS_EQ_BANDS);
+    if (savedBands) {
+      const parsed = JSON.parse(savedBands);
       if (Array.isArray(parsed) && parsed.length === 5) _eqValues = parsed;
     }
-    const norm = localStorage.getItem(LS_EQ_NORM);
-    if (norm !== null) _normEnabled = norm === 'true';
-    const rate = localStorage.getItem(LS_EQ_RATE);
-    if (rate !== null) _currentRate = parseFloat(rate) || 1;
+    const savedNorm = localStorage.getItem(LS_EQ_NORM);
+    if (savedNorm !== null) _normEnabled = savedNorm === 'true';
+
+    const savedRate = localStorage.getItem(LS_EQ_RATE);
+    if (savedRate !== null) _currentRate = parseFloat(savedRate) || 1;
   } catch (e) { /* localStorage indisponible */ }
 })();
 
-/* ─── Définition des bandes ─── */
 
+/* ─────────────────────────────────────────
+   DÉFINITION DES BANDES EQ
+───────────────────────────────────────── */
 const EQ_BANDS = [
-  { label: 'Sub',    freq: 60,    type: 'lowshelf'  },
-  { label: 'Bass',   freq: 250,   type: 'peaking'   },
-  { label: 'Mid',    freq: 1000,  type: 'peaking'   },
-  { label: 'Pres',   freq: 4000,  type: 'peaking'   },
-  { label: 'Air',    freq: 16000, type: 'highshelf'  },
+  { label: 'Sub',  freq: 60,    type: 'lowshelf'  },
+  { label: 'Bass', freq: 250,   type: 'peaking'   },
+  { label: 'Mid',  freq: 1000,  type: 'peaking'   },
+  { label: 'Pres', freq: 4000,  type: 'peaking'   },
+  { label: 'Air',  freq: 16000, type: 'highshelf'  },
 ];
 
-/* ─── Presets EQ ─── */
-
+/* ─────────────────────────────────────────
+   PRESETS EQ
+───────────────────────────────────────── */
 const EQ_PRESETS = {
-  'Flat':        [  0,  0,  0,  0,  0 ],
-  'Bass+':       [  6,  4,  0, -1, -1 ],
-  'Treble+':     [ -1, -1,  0,  4,  6 ],
-  'Vocal':       [ -2,  0,  4,  3,  1 ],
-  'Électro':     [  5,  3,  0,  2,  4 ],
-  'Acoustique':  [  2,  1,  0,  2,  3 ],
-  'Jazz':        [  3,  2,  0,  2,  1 ],
-  'Classique':   [  0,  0,  0,  2,  3 ],
+  'Flat':       [  0,  0,  0,  0,  0 ],
+  'Bass+':      [  6,  4,  0, -1, -1 ],
+  'Treble+':    [ -1, -1,  0,  4,  6 ],
+  'Vocal':      [ -2,  0,  4,  3,  1 ],
+  'Électro':    [  5,  3,  0,  2,  4 ],
+  'Acoustique': [  2,  1,  0,  2,  3 ],
+  'Jazz':       [  3,  2,  0,  2,  1 ],
+  'Classique':  [  0,  0,  0,  2,  3 ],
 };
 
-/* ═══════════════════════════════════════════
-   INIT WEB AUDIO
-   Déclenchée au premier geste utilisateur
-   (contrainte navigateur : AudioContext
-   ne peut pas être créé sans interaction)
-═══════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════
+   INITIALISATION WEB AUDIO
+   Déclenchée au premier geste utilisateur (contrainte
+   navigateur : AudioContext interdit sans interaction).
+═══════════════════════════════════════════════════════════ */
 
 function _initWebAudio() {
   if (_webAudioReady) return;
@@ -76,18 +93,18 @@ function _initWebAudio() {
   try {
     _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    /* Sources MediaElement — branche les <audio> dans le graphe Web Audio */
+    /* Sources MediaElement — branche les <audio> dans le graphe */
     const src1 = _audioCtx.createMediaElementSource(_audio1);
     const src2 = _audioCtx.createMediaElementSource(_audio2);
 
-    /* GainNodes (remplacent .volume natif) */
+    /* GainNodes — remplacent le .volume natif */
     _gain1 = _audioCtx.createGain();
     _gain2 = _audioCtx.createGain();
     _gain1.gain.value = _audio1.volume;
     _gain2.gain.value = _audio2.volume;
 
     /* Chaînes de filtres EQ — une par lecteur */
-    function makeBands() {
+    function _makeBands() {
       return EQ_BANDS.map(b => {
         const f = _audioCtx.createBiquadFilter();
         f.type            = b.type;
@@ -97,64 +114,62 @@ function _initWebAudio() {
         return f;
       });
     }
-    _filters1 = makeBands();
-    _filters2 = makeBands();
+    _filters1 = _makeBands();
+    _filters2 = _makeBands();
 
     /* Compresseur dynamique (normalisation perceptuelle) */
     _compressor = _audioCtx.createDynamicsCompressor();
     _compressor.threshold.value = -24;
     _compressor.knee.value      =  30;
-    _compressor.ratio.value     =   1; // neutre par défaut (activé via toggleNormalization)
+    _compressor.ratio.value     =   1; // neutre par défaut
     _compressor.attack.value    =  0.003;
     _compressor.release.value   =  0.25;
 
-    /* Connexion : src → gain → [eq × 5] → compressor → destination */
-    function connectChain(src, gain, filters) {
+    /* Connexion : src → gain → [EQ × 5] → compressor → destination */
+    function _connectChain(src, gain, filters) {
       src.connect(gain);
-      let prev = gain;
-      filters.forEach(f => { prev.connect(f); prev = f; });
-      prev.connect(_compressor);
+      let node = gain;
+      filters.forEach(f => { node.connect(f); node = f; });
+      node.connect(_compressor);
     }
-    connectChain(src1, _gain1, _filters1);
-    connectChain(src2, _gain2, _filters2);
+    _connectChain(src1, _gain1, _filters1);
+    _connectChain(src2, _gain2, _filters2);
     _compressor.connect(_audioCtx.destination);
 
-    /* ───────────────────────────────────────
-       OVERRIDE .volume sur les deux <audio>
-       → tout le code existant (crossfade,
-         setVol) continue de fonctionner
-         SANS aucune modification.
-    ─────────────────────────────────────── */
-    [
-      { el: _audio1, gainNode: _gain1 },
-      { el: _audio2, gainNode: _gain2 },
-    ].forEach(({ el, gainNode }) => {
+    /* ─────────────────────────────────────────
+       Override .volume sur les deux <audio>
+       Tout le code existant (crossfade, setVol)
+       continue de fonctionner sans modification.
+    ───────────────────────────────────────── */
+    [{ el: _audio1, gain: _gain1 }, { el: _audio2, gain: _gain2 }].forEach(({ el, gain }) => {
       let _vol = el.volume;
       Object.defineProperty(el, 'volume', {
         get() { return _vol; },
         set(v) {
           _vol = Math.max(0, Math.min(1, v));
-          if (gainNode) gainNode.gain.value = _vol;
+          if (gain) gain.gain.value = _vol;
         },
         configurable: true,
       });
     });
 
     _webAudioReady = true;
-    console.log('[Arya EQ] ✅ Web Audio Engine prêt — AudioContext:', _audioCtx.sampleRate + 'Hz');
 
-    /* ── Restaure les préférences persistées ── */
+    /* Restaure les préférences persistées */
     _eqValues.forEach((db, i) => {
       _filters1[i].gain.value = db;
       _filters2[i].gain.value = db;
     });
+
     if (_normEnabled) {
       _compressor.ratio.value     = 12;
       _compressor.threshold.value = -24;
     }
+
     _audio1.playbackRate = _currentRate;
     _audio2.playbackRate = _currentRate;
-    /* Met à jour l'UI après restauration */
+
+    /* Sync UI */
     _refreshEqUI();
     const rateLabel = document.getElementById('playbackRateLabel');
     if (rateLabel) rateLabel.textContent = _currentRate === 1 ? '1×' : _currentRate + '×';
@@ -165,25 +180,24 @@ function _initWebAudio() {
     if (btnNorm) btnNorm.classList.toggle('on', _normEnabled);
 
   } catch (e) {
-    console.warn('[Arya EQ] ⚠️ Web Audio non disponible :', e);
+    console.warn('[Arya EQ] Web Audio non disponible :', e);
   }
 }
 
-/* Déclenche l'init au premier geste */
+/* Déclenche l'init au premier geste utilisateur */
 ['click', 'touchstart', 'keydown'].forEach(evt =>
   document.addEventListener(evt, _initWebAudio, { once: true, passive: true })
 );
 
 
-
-/* ═══════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    CONTRÔLES EQ
-═══════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════ */
 
 /**
- * Règle le gain d'une bande EQ (s'applique aux 2 lecteurs).
+ * Règle le gain d'une bande EQ (appliqué aux 2 lecteurs).
  * @param {number} bandIdx - 0 à 4
- * @param {number} gainDb  - entre -12 et +12 dB
+ * @param {number} gainDb  - -12 à +12 dB
  */
 function setEqBand(bandIdx, gainDb) {
   if (!_webAudioReady) return;
@@ -191,7 +205,7 @@ function setEqBand(bandIdx, gainDb) {
   _filters1[bandIdx].gain.value = db;
   _filters2[bandIdx].gain.value = db;
   _eqValues[bandIdx] = db;
-  try { localStorage.setItem(LS_EQ_BANDS, JSON.stringify(_eqValues)); } catch(e) {}
+  try { localStorage.setItem(LS_EQ_BANDS, JSON.stringify(_eqValues)); } catch (e) {}
 }
 
 /**
@@ -203,64 +217,66 @@ function applyEqPreset(name) {
   if (!preset) return;
   preset.forEach((db, i) => setEqBand(i, db));
   _eqValues = [...preset];
-  try { localStorage.setItem(LS_EQ_BANDS, JSON.stringify(_eqValues)); } catch(e) {}
+  try { localStorage.setItem(LS_EQ_BANDS, JSON.stringify(_eqValues)); } catch (e) {}
   _refreshEqUI();
 }
 
-/** Remet toutes les bandes à 0 dB */
+/** Remet toutes les bandes à 0 dB (preset Flat). */
 function resetEq() {
   applyEqPreset('Flat');
-  _refreshEqUI();
 }
 
-/* ═══════════════════════════════════════════
+
+/* ═══════════════════════════════════════════════════════════
    NORMALISATION
-═══════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════ */
 
 /**
  * Active/désactive la normalisation du volume
  * via le compresseur dynamique.
+ * @param {boolean} enabled
  */
 function toggleNormalization(enabled) {
   _normEnabled = !!enabled;
-  try { localStorage.setItem(LS_EQ_NORM, _normEnabled); } catch(e) {}
+  try { localStorage.setItem(LS_EQ_NORM, _normEnabled); } catch (e) {}
+
   if (_webAudioReady && _compressor) {
     if (_normEnabled) {
       _compressor.ratio.value     = 12;
       _compressor.threshold.value = -24;
     } else {
-      _compressor.ratio.value     =  1;  // ratio 1:1 = neutre
+      _compressor.ratio.value     =  1; // ratio 1:1 = neutre (bypass)
       _compressor.threshold.value =  0;
     }
   }
-  /* Sync bouton dans l'UI */
+
   const btn = document.getElementById('btnNorm');
   if (btn) btn.classList.toggle('on', _normEnabled);
   toast(_normEnabled ? '🎚 Normalisation activée' : '🎚 Normalisation désactivée');
 }
 
-/* ═══════════════════════════════════════════
+
+/* ═══════════════════════════════════════════════════════════
    VITESSE DE LECTURE
-═══════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════ */
 
 const RATE_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 /**
  * Définit la vitesse de lecture sur les 2 lecteurs.
- * @param {number} rate - valeur entre 0.5 et 2
+ * @param {number} rate - 0.5 à 2
  */
 function setPlaybackRate(rate) {
   const r = Math.min(2, Math.max(0.5, parseFloat(rate)));
-  _currentRate    = r;
-  try { localStorage.setItem(LS_EQ_RATE, r); } catch(e) {}
+  _currentRate = r;
+  try { localStorage.setItem(LS_EQ_RATE, r); } catch (e) {}
+
   _audio1.playbackRate = r;
   _audio2.playbackRate = r;
 
-  /* Met à jour l'affichage */
   const label = document.getElementById('playbackRateLabel');
   if (label) label.textContent = r === 1 ? '1×' : r + '×';
 
-  /* Sync les boutons de vitesse */
   document.querySelectorAll('.rate-btn').forEach(btn => {
     btn.classList.toggle('on', parseFloat(btn.dataset.rate) === r);
   });
@@ -268,18 +284,19 @@ function setPlaybackRate(rate) {
   if (r !== 1) toast('⏩ Vitesse : ' + r + '×');
 }
 
-/** Passe à la vitesse suivante dans RATE_STEPS (mode cyclique) */
+/** Passe à la vitesse suivante dans RATE_STEPS (cyclique). */
 function cyclePlaybackRate() {
   const idx  = RATE_STEPS.indexOf(_currentRate);
   const next = RATE_STEPS[(idx + 1) % RATE_STEPS.length];
   setPlaybackRate(next);
 }
 
-/* ═══════════════════════════════════════════
-   UI — SYNC PANNEAU EQ
-   Le HTML est dans index.html, on sync juste les valeurs
-═══════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════
+   UI — SYNC PANNEAU EQ
+═══════════════════════════════════════════════════════════ */
+
+/** Met à jour les sliders et valeurs affichées dans le panneau EQ. */
 function _refreshEqUI() {
   _eqValues.forEach((db, i) => {
     const slider = document.getElementById('eq-slider-' + i);
@@ -289,16 +306,17 @@ function _refreshEqUI() {
   });
 }
 
-/* Conservée pour compatibilité avec fullscreen.js — ne fait que syncer les valeurs */
-function renderEqPanel(containerId) {
+/** Alias public — conservé pour compatibilité avec fullscreen.js. */
+function renderEqPanel() {
   _refreshEqUI();
 }
 
-/* ═══════════════════════════════════════════
-   CSS INJECTÉ
-═══════════════════════════════════════════ */
 
-(function injectEqStyles() {
+/* ═══════════════════════════════════════════════════════════
+   STYLES
+═══════════════════════════════════════════════════════════ */
+
+(function _injectEqStyles() {
   if (document.getElementById('eq-styles')) return;
   const s = document.createElement('style');
   s.id = 'eq-styles';
@@ -318,7 +336,7 @@ function renderEqPanel(containerId) {
       margin-bottom: 10px;
     }
 
-    /* Presets */
+    /* ── Presets ── */
     .eq-presets {
       display: flex;
       flex-wrap: wrap;
@@ -334,13 +352,14 @@ function renderEqPanel(containerId) {
       cursor: pointer;
       transition: background .15s, border-color .15s;
     }
-    .preset-btn:hover, .preset-btn.on {
+    .preset-btn:hover,
+    .preset-btn.on {
       background: var(--accent, #e91e8c);
       border-color: var(--accent, #e91e8c);
       color: #fff;
     }
 
-    /* Sliders EQ */
+    /* ── Sliders ── */
     .eq-sliders {
       display: flex;
       justify-content: space-around;
@@ -377,14 +396,8 @@ function renderEqPanel(containerId) {
       transform: rotate(-90deg);
       transform-origin: center center;
     }
-    .eq-label {
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .eq-freq {
-      font-size: 9px;
-      opacity: .45;
-    }
+    .eq-label { font-size: 11px; font-weight: 600; }
+    .eq-freq  { font-size: 9px; opacity: .45; }
     .eq-reset {
       margin-top: 8px;
       font-size: 11px;
@@ -398,7 +411,7 @@ function renderEqPanel(containerId) {
     }
     .eq-reset:hover { opacity: 1; }
 
-    /* Normalisation */
+    /* ── Normalisation ── */
     .eq-norm-row {
       display: flex;
       align-items: center;
@@ -424,7 +437,7 @@ function renderEqPanel(containerId) {
       color: #fff;
     }
 
-    /* Vitesse */
+    /* ── Vitesse ── */
     .rate-row {
       display: flex;
       gap: 6px;
@@ -449,5 +462,3 @@ function renderEqPanel(containerId) {
   `;
   document.head.appendChild(s);
 })();
-
-
