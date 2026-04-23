@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   LIBRARY.JS — Arya
+   LIBRARY.JS — Arya V2
    Favoris, historique et statistiques d'écoute.
 
    Dépend de : config.js, utils.js, covers.js,
