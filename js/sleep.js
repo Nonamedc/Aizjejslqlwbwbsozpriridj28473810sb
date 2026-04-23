@@ -1,17 +1,24 @@
-/* ══════════════════════════════════════════════
-   SLEEP TIMER — Arya v5.1
-   FIX : popstate FS player + bouton mobile visible
-══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   SLEEP.JS — Arya v2
+   Minuterie de sommeil avec fondu progressif (2.5s).
+   Patch transparent de playFromQueue et triggerCrossfade.
 
-let _slTO    = null;
-let _slTick  = null;
-let _slEnd   = 0;
-let _slNext  = false;
-let _slDoing = false;
+   Dépend de : config.js, utils.js, audio-engine.js,
+               playback.js, fullscreen.js (pour _fsOpen)
+═══════════════════════════════════════════════════════════ */
 
-const _SL_PRESETS = [15, 20, 30, 45, 60, 90];
+let _slTO    = null;  // setTimeout de fin
+let _slTick  = null;  // setInterval de refresh UI
+let _slEnd   = 0;     // timestamp de fin (ms)
+let _slNext  = false; // pause après la piste courante
+let _slDoing = false; // fondu en cours
 
-/* ══ Core ══ */
+const _SL_PRESETS = [15, 20, 30, 45, 60, 90]; // minutes
+
+
+/* ═══════════════════════════════════════════════════════════
+   CORE
+═══════════════════════════════════════════════════════════ */
 
 function startSleepTimer(min) {
   _clearSl(true);
@@ -36,7 +43,8 @@ function _clearSl(silent = false) {
   if (_slTO)   { clearTimeout(_slTO);    _slTO   = null; }
   if (_slTick) { clearInterval(_slTick); _slTick = null; }
   const wasActive = _slEnd > 0 || _slNext;
-  _slEnd = 0; _slNext = false;
+  _slEnd  = 0;
+  _slNext = false;
   _updateSleepUI();
   if (!silent && wasActive) toast('⏰ Minuterie annulée');
 }
@@ -45,36 +53,43 @@ async function _doSleep() {
   if (_slDoing) return;
   _slDoing = true;
   _clearSl(true);
+
+  // Fondu progressif sur les 2 lecteurs en parallèle
   await Promise.all([_audio1, _audio2].map(a => {
     if (a.paused || a.volume === 0) return Promise.resolve();
     return new Promise(res => {
-      const ov = a.volume, STEPS = 25, MS = 2500 / STEPS;
-      let step = 0;
-      const id = setInterval(() => {
+      const ov    = a.volume;
+      const STEPS = 25;
+      const MS    = 2500 / STEPS;
+      let step    = 0;
+      const id    = setInterval(() => {
         a.volume = ov * (1 - ++step / STEPS);
         if (step >= STEPS) {
           clearInterval(id);
           a.pause();
-          setTimeout(() => { a.volume = ov; }, 200);
+          setTimeout(() => { a.volume = ov; }, 200); // restaure le volume pour la prochaine lecture
           res();
         }
       }, MS);
     });
   }));
+
   toast('😴 Bonne nuit !');
   _updateSleepUI();
   _slDoing = false;
 }
 
+/** Vérifie si la minuterie "après piste" doit bloquer la prochaine lecture. */
 function _slCheckBlock() {
   if (_slDoing) return true;
-  if (!_slNext)  return false;
+  if (!_slNext) return false;
   _slNext = false;
   if (typeof _cancelPreload === 'function') _cancelPreload().catch(() => {});
   setTimeout(_doSleep, 60);
   return true;
 }
 
+/* Patch playFromQueue — bloque si minuterie "fin de chanson" */
 (function () {
   const orig = window.playFromQueue;
   if (!orig || orig._slP) return;
@@ -82,6 +97,7 @@ function _slCheckBlock() {
   window.playFromQueue._slP = true;
 })();
 
+/* Patch triggerCrossfade — bloque le gapless si minuterie active */
 (function () {
   const orig = window.triggerCrossfade;
   if (!orig || orig._slP) return;
@@ -92,7 +108,10 @@ function _slCheckBlock() {
   window.triggerCrossfade._slP = true;
 })();
 
-/* ══ UI ══ */
+
+/* ═══════════════════════════════════════════════════════════
+   UI
+═══════════════════════════════════════════════════════════ */
 
 function _slRemainingText() {
   if (_slNext) return '😴 Fin de chanson';
@@ -107,6 +126,7 @@ function _slRemainingText() {
 function _updateSleepUI() {
   const txt = _slRemainingText();
   const on  = !!(_slEnd || _slNext);
+
   ['fsSleepBtn', 'miniSleepBtn'].forEach(id => {
     const b = document.getElementById(id);
     if (!b) return;
@@ -114,11 +134,18 @@ function _updateSleepUI() {
     b.classList.toggle('rose', on);
     b.title = on ? `${txt} — Annuler` : 'Minuterie de sommeil';
   });
+
   const lbl = document.getElementById('fsSleepLabel');
-  if (lbl) { lbl.textContent = txt || ''; lbl.style.display = txt ? '' : 'none'; }
+  if (lbl) {
+    lbl.textContent    = txt || '';
+    lbl.style.display  = txt ? '' : 'none';
+  }
 }
 
-/* ══ Sheet ══ */
+
+/* ═══════════════════════════════════════════════════════════
+   SHEET
+═══════════════════════════════════════════════════════════ */
 
 function openSleepSheet() {
   const on     = !!(_slEnd || _slNext);
@@ -128,12 +155,13 @@ function openSleepSheet() {
   const presets = _SL_PRESETS.map(m => {
     const label    = m < 60 ? m + ' min' : (m / 60) + 'h';
     const isActive = _slEnd && Math.abs(nowMin - m) < 5;
-    return `<button onclick="startSleepTimer(${m});closeSleepSheet();"
-      style="padding:14px 6px;border-radius:12px;background:var(--card);
-             border:1.5px solid ${isActive ? 'var(--rose)' : 'var(--border)'};
-             color:${isActive ? 'var(--rose)' : 'var(--text)'};
-             font-size:13.5px;font-weight:600;cursor:pointer;
-             font-family:'Outfit',sans-serif;">${label}</button>`;
+    return `
+      <button onclick="startSleepTimer(${m});closeSleepSheet();"
+              style="padding:14px 6px;border-radius:12px;background:var(--card);
+                     border:1.5px solid ${isActive ? 'var(--rose)' : 'var(--border)'};
+                     color:${isActive ? 'var(--rose)' : 'var(--text)'};
+                     font-size:13.5px;font-weight:600;cursor:pointer;
+                     font-family:'Outfit',sans-serif;">${label}</button>`;
   }).join('');
 
   const html = `
@@ -144,28 +172,34 @@ function openSleepSheet() {
           <div style="font-size:12px;color:${on ? 'var(--rose)' : 'var(--text3)'};margin-top:4px;line-height:1.6;">
             ${on
               ? `${txt}&ensp;·&ensp;<span style="cursor:pointer;text-decoration:underline;"
-                  onclick="cancelSleepTimer();closeSleepSheet();">Annuler</span>`
+                    onclick="cancelSleepTimer();closeSleepSheet();">Annuler</span>`
               : 'Fondu progressif de 2.5s avant la pause'}
           </div>
         </div>
         <button onclick="closeSleepSheet()"
-          style="background:none;border:none;color:var(--text3);font-size:22px;
-                 cursor:pointer;line-height:1;padding:4px;margin-top:-2px;">×</button>
+                style="background:none;border:none;color:var(--text3);font-size:22px;
+                       cursor:pointer;line-height:1;padding:4px;margin-top:-2px;">×</button>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">${presets}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+        ${presets}
+      </div>
       <button onclick="startSleepAfterTrack();closeSleepSheet();"
-        style="width:100%;padding:13px;border-radius:12px;background:var(--card);
-               border:1.5px solid ${_slNext ? 'var(--rose)' : 'var(--border)'};
-               color:${_slNext ? 'var(--rose)' : 'var(--text2)'};
-               font-size:13.5px;font-weight:500;cursor:pointer;font-family:'Outfit',sans-serif;
-               margin-bottom:${on ? '10' : '0'}px;">
+              style="width:100%;padding:13px;border-radius:12px;background:var(--card);
+                     border:1.5px solid ${_slNext ? 'var(--rose)' : 'var(--border)'};
+                     color:${_slNext ? 'var(--rose)' : 'var(--text2)'};
+                     font-size:13.5px;font-weight:500;cursor:pointer;
+                     font-family:'Outfit',sans-serif;
+                     margin-bottom:${on ? '10' : '0'}px;">
         🎵 Après la chanson courante
       </button>
-      ${on ? `<button onclick="cancelSleepTimer();closeSleepSheet();"
-        style="width:100%;padding:11px;border-radius:12px;background:var(--rose-glow);
-               border:1px solid rgba(196,77,110,.35);color:var(--rose);
-               font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;">
-        ✕ Annuler la minuterie</button>` : ''}
+      ${on ? `
+      <button onclick="cancelSleepTimer();closeSleepSheet();"
+              style="width:100%;padding:11px;border-radius:12px;background:var(--rose-glow);
+                     border:1px solid rgba(196,77,110,.35);color:var(--rose);
+                     font-size:13px;font-weight:600;cursor:pointer;
+                     font-family:'Outfit',sans-serif;">
+        ✕ Annuler la minuterie
+      </button>` : ''}
     </div>`;
 
   _openGenSheet('sleepSheet', html);
@@ -173,17 +207,14 @@ function openSleepSheet() {
 
 function closeSleepSheet() { _closeGenSheet('sleepSheet'); }
 
-/* ══════════════════════════════════════════════
-   FIX POPSTATE — Sheet générique FS-aware
-   ──────────────────────────────────────────────
-   AVANT : history.pushState systématique
-   → popstate de fullscreen.js interceptait history.back()
-     et fermait le FS player au lieu du sheet.
 
-   MAINTENANT : si _fsOpen === true, on NE push pas dans
-   l'historique. La fermeture se fait uniquement en CSS.
-   On mémorise par sheet si un état a bien été pushé.
-══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   GENERIC SHEET — Système de sheets FS-aware
+   ──────────────────────────────────────────────────────────
+   Si _fsOpen === true, on ne push PAS dans l'historique.
+   fullscreen.js intercepte popstate et fermerait le FS
+   player au lieu du sheet — ce fix l'évite.
+═══════════════════════════════════════════════════════════ */
 
 const _genSheetHistPushed = {};
 
@@ -217,22 +248,14 @@ function _openGenSheet(id, html) {
 
   bd.style.pointerEvents = 'auto';
   requestAnimationFrame(() => {
-    bd.style.opacity = '1';
-    sh.style.transform = 'translateY(0)';
+    bd.style.opacity       = '1';
+    sh.style.transform     = 'translateY(0)';
   });
 
-  // ── FIX ──────────────────────────────────────
-  // Ne pas pousser dans l'historique si on est
-  // à l'intérieur du lecteur plein écran.
-  // fullscreen.js écoute popstate et, quand
-  // _fsOpen === true, ferme le FS player —
-  // ce qui faisait "quitter" au lieu de fermer le sheet.
+  // Ne push pas dans l'historique si on est dans le lecteur plein écran
   const insideFs = !!window._fsOpen;
   _genSheetHistPushed[id] = !insideFs;
-  if (!insideFs) {
-    history.pushState({ arya: id }, '');
-  }
-  // ─────────────────────────────────────────────
+  if (!insideFs) history.pushState({ arya: id }, '');
 }
 
 function _closeGenSheet(id) {
@@ -241,37 +264,38 @@ function _closeGenSheet(id) {
   if (!sh) return;
   if (bd) { bd.style.opacity = '0'; bd.style.pointerEvents = 'none'; }
   sh.style.transform = 'translateY(100%)';
-
-  // Ne pop que si on avait pushé un état pour ce sheet
   if (_genSheetHistPushed[id] && history.state?.arya === id) {
     _genSheetHistPushed[id] = false;
     history.back();
   }
 }
 
-/* ══ Injection boutons ══ */
+
+/* ═══════════════════════════════════════════════════════════
+   INJECTION DES BOUTONS DANS LE DOM
+═══════════════════════════════════════════════════════════ */
 
 function _injectSleepBtns() {
-  /* ── FS Player : bouton 😴 avant les paroles ── */
+  // Bouton dans le lecteur plein écran (avant les paroles)
   if (!document.getElementById('fsSleepBtn')) {
     const ref = document.getElementById('fsLyricsBtn');
     if (ref) {
-      const b = document.createElement('button');
-      b.id = 'fsSleepBtn';
-      b.className = 'fs-btn';
-      b.textContent = '😴';
-      b.title = 'Minuterie de sommeil';
-      b.onclick = openSleepSheet;
+      const b = Object.assign(document.createElement('button'), {
+        id:        'fsSleepBtn',
+        className: 'fs-btn',
+        textContent: '😴',
+        title:     'Minuterie de sommeil',
+        onclick:   openSleepSheet,
+      });
       ref.before(b);
     }
   }
 
-  /* ── FS Player : label temps restant ── */
+  // Label temps restant dans le lecteur plein écran
   if (!document.getElementById('fsSleepLabel')) {
     const vol = document.querySelector('#fsPlayer .fs-vol-wrap');
     if (vol) {
-      const lbl = document.createElement('div');
-      lbl.id = 'fsSleepLabel';
+      const lbl = Object.assign(document.createElement('div'), { id: 'fsSleepLabel' });
       lbl.style.cssText =
         'font-size:11px;color:rgba(255,255,255,.36);text-align:center;' +
         'letter-spacing:.06em;display:none;margin-top:-5px;';
@@ -279,38 +303,32 @@ function _injectSleepBtns() {
     }
   }
 
-  /* ── Mini player mobile ──────────────────────────────────────
-     btnParty est dans .p-right → display:none sur mobile.
-     On injecte miniSleepBtn dans .p-btns (après btnNext),
-     visible uniquement sur mobile via une règle CSS injectée.
-     Sur desktop le FS player suffit (bouton caché par défaut).
-  ────────────────────────────────────────────────────────────── */
+  // Bouton dans le mini player mobile (après btnNext, visible via media query)
   if (!document.getElementById('miniSleepBtn')) {
-    // Cherche btnNext dans p-btns
     const refNext = document.getElementById('btnNext');
     if (refNext) {
-      const b = document.createElement('button');
-      b.id = 'miniSleepBtn';
-      b.className = 'p-btn';
-      b.textContent = '😴';
-      b.title = 'Minuterie de sommeil';
-      b.onclick = openSleepSheet;
-      b.style.display = 'none'; // caché par défaut
+      const b = Object.assign(document.createElement('button'), {
+        id:          'miniSleepBtn',
+        className:   'p-btn',
+        textContent: '😴',
+        title:       'Minuterie de sommeil',
+        onclick:     openSleepSheet,
+      });
+      b.style.display = 'none'; // caché par défaut, révélé par la media query
       refNext.after(b);
 
-      // Affiche sur mobile uniquement
       if (!document.getElementById('sl-mini-style')) {
-        const s = document.createElement('style');
-        s.id = 'sl-mini-style';
-        s.textContent = '@media(max-width:640px){#miniSleepBtn{display:flex!important;}}';
+        const s = Object.assign(document.createElement('style'), {
+          id:          'sl-mini-style',
+          textContent: '@media(max-width:640px){#miniSleepBtn{display:flex!important;}}',
+        });
         document.head.appendChild(s);
       }
     }
   }
-
-  console.log('[Arya Sleep] ✅ Boutons injectés (v5.1)');
 }
 
+// Injecte dès que le DOM est prêt
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', _injectSleepBtns);
 } else {
