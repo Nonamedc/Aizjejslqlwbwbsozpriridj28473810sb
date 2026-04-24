@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   CACHE.JS — Arya
+   CACHE.JS V2 — Arya
    Cache audio hors ligne via IndexedDB.
    Demande l'autorisation à l'utilisateur au premier lancement.
 
@@ -32,12 +32,22 @@ const CacheManager = (() => {
   const DB_VERSION = 1;
   const STORE_NAME = 'audio_blobs';
   const LS_ENABLED = 'arya_cache_enabled'; // 'true' | 'false' | absent = pas encore demandé
+  const LS_QUOTA   = 'arya_cache_quota';   // quota en bytes
 
-  let _db        = null;
-  let _enabled   = localStorage.getItem(LS_ENABLED) === 'true';
+  const QUOTA_OPTIONS = [
+    { label: '500 Mo',   bytes: 500  * 1_048_576 },
+    { label: '1 Go',     bytes: 1024 * 1_048_576 },
+    { label: '2 Go',     bytes: 2048 * 1_048_576 },
+    { label: '5 Go',     bytes: 5120 * 1_048_576 },
+    { label: 'Illimité', bytes: Infinity },
+  ];
+
+  let _db      = null;
+  let _enabled = localStorage.getItem(LS_ENABLED) === 'true';
+  let _quota   = parseInt(localStorage.getItem(LS_QUOTA) || '0') || 2048 * 1_048_576; // 2 Go par défaut
   let _dbReady   = false;
-  let _dbPending = []; // callbacks en attente d'ouverture DB
-  const _prefetching = new Set(); // filenames en cours de préchargement
+  let _dbPending = [];
+  const _prefetching = new Set();
 
 
   /* ═══════════════════════════════════════════════════════════
@@ -92,6 +102,28 @@ const CacheManager = (() => {
       tx.oncomplete = () => res();
       tx.onerror    = () => rej(req.error);
     });
+  }
+
+  /* ─────────────────────────────────────────
+     ÉVICTION LRU — supprime les pistes les plus
+     anciennes si le quota est dépassé.
+  ───────────────────────────────────────── */
+  async function _enforceQuota() {
+    if (_quota === Infinity) return;
+    const all    = await _getAll();
+    let used     = all.reduce((a, e) => a + (e.size || 0), 0);
+    if (used <= _quota) return;
+
+    // Tri par lastUsed (le plus ancien en premier)
+    const sorted = [...all].sort((a, b) => (a.lastUsed || a.cachedAt) - (b.lastUsed || b.cachedAt));
+    for (const entry of sorted) {
+      if (used <= _quota) break;
+      await _delete(entry.filename);
+      _cachedSet.delete(entry.filename);
+      used -= (entry.size || 0);
+      console.log('[Arya Cache] Éviction LRU :', entry.filename);
+    }
+    _refreshBadges();
   }
 
   async function _delete(filename) {
@@ -165,6 +197,9 @@ const CacheManager = (() => {
         'justify-content:center;background:rgba(0,0,0,.72);' +
         'backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:16px;';
 
+      // Quota sélectionné par défaut : 2 Go
+      let _selectedQuota = 2048 * 1_048_576;
+
       overlay.innerHTML = `
         <div style="
           background:var(--surface);
@@ -178,12 +213,27 @@ const CacheManager = (() => {
           <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:10px;text-align:center;">
             Mode hors ligne
           </div>
-          <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px;text-align:center;">
+          <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px;text-align:center;">
             Arya peut sauvegarder vos musiques sur cet appareil.<br>
             Lecture <strong style="color:var(--text);">instantanée</strong>, même sans connexion.<br>
             <span style="font-size:11.5px;color:var(--text3);">
-              Comme Spotify — les fichiers audio sont stockés localement.
+              Les musiques les plus anciennes sont supprimées automatiquement si le quota est atteint.
             </span>
+          </div>
+
+          <div style="font-size:11.5px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;">
+            Espace à allouer
+          </div>
+          <div id="quotaBtns" style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:18px;">
+            ${QUOTA_OPTIONS.map(o => `
+              <button data-bytes="${o.bytes === Infinity ? 'Infinity' : o.bytes}"
+                      style="padding:10px 6px;border-radius:11px;font-size:13px;font-weight:600;
+                             border:2px solid ${o.bytes === 2048 * 1_048_576 ? 'var(--accent)' : 'var(--border)'};
+                             background:${o.bytes === 2048 * 1_048_576 ? 'color-mix(in srgb,var(--accent) 15%,transparent)' : 'var(--surface2,#2a1f33)'};
+                             color:${o.bytes === 2048 * 1_048_576 ? 'var(--accent)' : 'var(--text2)'};
+                             cursor:pointer;font-family:inherit;transition:all .15s;">
+                ${o.label}
+              </button>`).join('')}
           </div>
 
           <div style="display:flex;gap:10px;">
@@ -204,15 +254,29 @@ const CacheManager = (() => {
           </div>
         </div>`;
 
+      // Gestion sélection quota
+      overlay.querySelector('#quotaBtns').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-bytes]');
+        if (!btn) return;
+        const raw = btn.dataset.bytes;
+        _selectedQuota = raw === 'Infinity' ? Infinity : parseInt(raw);
+        overlay.querySelectorAll('#quotaBtns button').forEach(b => {
+          const active = b === btn;
+          b.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+          b.style.background  = active ? 'color-mix(in srgb,var(--accent) 15%,transparent)' : 'var(--surface2,#2a1f33)';
+          b.style.color       = active ? 'var(--accent)' : 'var(--text2)';
+        });
+      });
+
       document.body.appendChild(overlay);
 
       document.getElementById('cacheYes').onclick = () => {
         overlay.remove();
-        resolve(true);
+        resolve({ accepted: true, quota: _selectedQuota });
       };
       document.getElementById('cacheNo').onclick = () => {
         overlay.remove();
-        resolve(false);
+        resolve({ accepted: false, quota: null });
       };
     });
   }
@@ -332,25 +396,41 @@ const CacheManager = (() => {
     let usageHtml = '';
 
     if (enabled) {
-      const usage = await getUsage().catch(() => ({ used: 0, count: 0 }));
+      const usage  = await getUsage().catch(() => ({ used: 0, count: 0 }));
       const usedMb = (usage.used / 1_048_576).toFixed(1);
+      const quotaLabel = _quota === Infinity ? 'Illimité' : (_quota / 1_048_576) >= 1024
+        ? (_quota / 1_073_741_824).toFixed(0) + ' Go'
+        : (_quota / 1_048_576).toFixed(0) + ' Mo';
+      const pctQuota = _quota === Infinity ? 5 : Math.min(100, Math.round(usage.used / _quota * 100));
 
-      // Estimation de quota (varie selon navigateur — 60% du disque libre)
-      let quotaHtml = '';
-      try {
-        const est  = await navigator.storage.estimate();
-        const pct  = Math.min(100, Math.round(usage.used / est.quota * 100));
-        const quotaMb = (est.quota / 1_048_576).toFixed(0);
-        quotaHtml = `
-          <div class="cache-usage-bar">
-            <div class="cache-usage-fill" style="width:${pct}%"></div>
+      // Sélecteur de quota
+      const quotaSelectorHtml = `
+        <div style="margin:14px 0 8px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;">
+            Espace alloué
           </div>
-          <div style="font-size:11px;color:var(--text3);">
-            ${usedMb} Mo utilisés sur ~${quotaMb} Mo disponibles (${pct}%)
-          </div>`;
-      } catch {
-        quotaHtml = `<div style="font-size:11px;color:var(--text3);">${usedMb} Mo · ${usage.count} piste${usage.count > 1 ? 's' : ''}</div>`;
-      }
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${QUOTA_OPTIONS.map(o => `
+              <button onclick="CacheManager.setQuota(${o.bytes === Infinity ? 'Infinity' : o.bytes})"
+                      style="padding:7px 13px;border-radius:20px;font-size:12.5px;font-weight:600;
+                             border:2px solid ${o.bytes === _quota ? 'var(--accent)' : 'var(--border)'};
+                             background:${o.bytes === _quota ? 'color-mix(in srgb,var(--accent) 15%,transparent)' : 'var(--card)'};
+                             color:${o.bytes === _quota ? 'var(--accent)' : 'var(--text2)'};
+                             cursor:pointer;font-family:inherit;">
+                ${o.label}
+              </button>`).join('')}
+          </div>
+        </div>`;
+
+      let quotaHtml = `
+        <div class="cache-usage-bar">
+          <div class="cache-usage-fill" style="width:${pctQuota}%"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">
+          ${usedMb} Mo utilisés sur ${quotaLabel} · ${usage.count} piste${usage.count !== 1 ? 's' : ''}
+          ${_quota !== Infinity ? `· (${pctQuota}%)` : ''}
+        </div>
+        ${quotaSelectorHtml}`;
 
       // Liste des pistes en cache
       let listHtml = '';
@@ -431,14 +511,17 @@ const CacheManager = (() => {
         if (!screen || screen.style.display === 'none') {
           clearInterval(waitPseudo);
           setTimeout(async () => {
-            const accepted = await _showPrompt();
+            const { accepted, quota } = await _showPrompt();
             localStorage.setItem(LS_ENABLED, accepted ? 'true' : 'false');
             _enabled = accepted;
             if (accepted) {
+              _quota = quota;
+              localStorage.setItem(LS_QUOTA, quota === Infinity ? 'Infinity' : String(quota));
               await _openDB();
               await _loadCachedSet();
               renderCacheSection();
-              toast('💾 Mode hors ligne activé !');
+              const opt = QUOTA_OPTIONS.find(o => o.bytes === quota);
+              toast('💾 Mode hors ligne activé — ' + (opt ? opt.label : 'quota personnalisé'));
             }
           }, 600);
         }
@@ -460,6 +543,10 @@ const CacheManager = (() => {
     try {
       const entry = await _get(filename);
       if (entry?.blob) {
+        // Met à jour lastUsed pour le LRU
+        const db = await _getDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put({ ...entry, lastUsed: Date.now() });
         return URL.createObjectURL(entry.blob);
       }
     } catch {}
@@ -477,6 +564,7 @@ const CacheManager = (() => {
       const blob = await _download(url);
       await _put(filename, blob, url);
       _cachedSet.add(filename);
+      await _enforceQuota();
       _refreshBadges();
     } catch (e) {
       console.warn('[Arya Cache] Préchargement échoué :', filename, e.message);
@@ -496,6 +584,7 @@ const CacheManager = (() => {
       const blob = await _download(url);
       await _put(filename, blob, url);
       _cachedSet.add(filename);
+      await _enforceQuota();
       _refreshBadges();
     } catch (e) {
       console.warn('[Arya Cache] Mise en cache échouée :', filename, e.message);
@@ -532,6 +621,14 @@ const CacheManager = (() => {
     return { used, count: all.length };
   }
 
+  function setQuota(bytes) {
+    _quota = bytes;
+    localStorage.setItem(LS_QUOTA, bytes === Infinity ? 'Infinity' : String(bytes));
+    _enforceQuota().then(() => renderCacheSection());
+    const opt = QUOTA_OPTIONS.find(o => o.bytes === bytes);
+    toast('💾 Quota : ' + (opt ? opt.label : (bytes / 1_048_576).toFixed(0) + ' Mo'));
+  }
+
   function enable() {
     localStorage.setItem(LS_ENABLED, 'true');
     _enabled = true;
@@ -557,6 +654,7 @@ const CacheManager = (() => {
     delete: deleteTrack,
     clear,
     getUsage,
+    setQuota,
     enable,
     disable,
     renderCacheSection,
