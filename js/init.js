@@ -1,11 +1,13 @@
 /* ═══════════════════════════════════════════════════════════
-   INIT.JS — Arya v2
+   INIT.JS v3 — Arya
    Point d'entrée de l'application.
    Chargé en dernier, après tous les autres scripts.
 ═══════════════════════════════════════════════════════════ */
 
 loadPseudo();
 fetchArchive();
+CacheManager.init();
+CacheManager.renderCacheSection();
 
 
 /* ═══════════════════════════════════════════════════════════
