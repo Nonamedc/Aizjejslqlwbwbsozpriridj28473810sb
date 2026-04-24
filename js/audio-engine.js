@@ -1,19 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
-   AUDIO-ENGINE.JS — Arya V6
+   AUDIO-ENGINE.JS V8 — Arya
    Double buffering Shaka Player + crossfade gapless.
-
-   Architecture :
-     _audio1 / _audio2  — deux éléments <audio> cachés
-     shaka1  / shaka2   — instances Shaka attachées
-     audio              — Proxy transparent vers le lecteur actif
-     activePlayer       — 1 ou 2, indique le lecteur en cours
-
-   Dépend de : Shaka Player (chargé avant ce fichier)
-═══════════════════════════════════════════════════════════ */
-
-
-/* ═══════════════════════════════════════════════════════════
-   ÉLÉMENTS AUDIO
 ═══════════════════════════════════════════════════════════ */
 
 const _audio1 = document.createElement('audio');
@@ -23,14 +10,13 @@ let activePlayer = 1;
 [_audio1, _audio2].forEach((el, i) => {
   el.style.display = 'none';
   el.preload       = 'auto';
-  el.crossOrigin   = 'anonymous'; // requis pour Web Audio API (eq.js)
+  el.crossOrigin   = 'anonymous';
   el.volume        = 0.8;
   el.setAttribute('playsinline',          '');
   el.setAttribute('webkit-playsinline',   '');
   el.setAttribute('x-webkit-airplay', 'allow');
   document.body.appendChild(el);
 
-  // Indicateur visuel de buffering sur la pochette
   el.addEventListener('waiting', () => {
     if (activePlayer === i + 1) {
       const pArt = document.getElementById('pArt');
@@ -80,8 +66,8 @@ const _setupShaka = async (player, el) => {
 
   player.addEventListener('error', event => {
     const e = event.detail;
-    if (e.code === 7000) return; // LOAD_INTERRUPTED — normal lors d'un changement de piste
-    if (player !== (activePlayer === 1 ? shaka1 : shaka2)) return; // lecteur inactif — ignorer
+    if (e.code === 7000) return;
+    if (player !== (activePlayer === 1 ? shaka1 : shaka2)) return;
     console.warn('[Arya Shaka] Erreur:', e.code, e.message);
     if (e.category === shaka.util.Error.Category.NETWORK) {
       toast('⚠️ Interruption réseau…', true);
@@ -101,10 +87,19 @@ window.addEventListener('load', () => {
 
 
 /* ═══════════════════════════════════════════════════════════
+   HELPER — attend canplay
+═══════════════════════════════════════════════════════════ */
+function _waitCanPlay(el) {
+  return new Promise(resolve => {
+    if (el.readyState >= 3) { resolve(); return; }
+    el.addEventListener('canplay', resolve, { once: true });
+    el.addEventListener('error',   resolve, { once: true });
+  });
+}
+
+
+/* ═══════════════════════════════════════════════════════════
    PROXY AUDIO
-   Expose une interface unique `audio` qui redirige
-   toutes les opérations vers le lecteur actif.
-   Utilisé par playback.js, eq.js, sleep.js, etc.
 ═══════════════════════════════════════════════════════════ */
 
 let _shakaPendingLoad = null;
@@ -114,7 +109,6 @@ const audio = new Proxy({}, {
     const el = activePlayer === 1 ? _audio1 : _audio2;
     const sh = activePlayer === 1 ? shaka1  : shaka2;
 
-    // play() attend que Shaka ait fini de charger
     if (prop === 'play') {
       return async function () {
         if (_shakaPendingLoad) {
@@ -137,14 +131,47 @@ const audio = new Proxy({}, {
     const sh = activePlayer === 1 ? shaka1  : shaka2;
 
     if (prop === 'src' && value) {
-      // Charge via Shaka, fallback natif si Shaka échoue
-      _shakaPendingLoad = sh.load(value)
-        .then(() => { _shakaPendingLoad = null; })
-        .catch(err => {
-          if (err.code !== 7000) console.warn('[Arya Shaka] Fallback natif :', err);
-          el.src = value;
+      const _filename = value.split('/').pop().split('?')[0];
+
+      // Assigné SYNCHRONEMENT — audio.play() attendra toujours
+      _shakaPendingLoad = (async () => {
+        try {
+          const blobUrl = (typeof CacheManager !== 'undefined' && CacheManager.isEnabled())
+            ? await CacheManager.getOrFetch(value, _filename)
+            : null;
+
+          if (blobUrl) {
+            // ✅ Cache disponible — bypass Shaka
+            console.log('[Arya Cache] 💾 Lecture hors ligne :', _filename);
+            el.src = blobUrl;
+            el.load();
+            await _waitCanPlay(el);
+
+          } else if (!navigator.onLine) {
+            // ❌ Hors ligne + pas en cache
+            console.warn('[Arya Cache] Hors ligne, non mis en cache :', _filename);
+            toast('📶 Hors ligne — piste non disponible sans connexion', true);
+
+          } else {
+            // 🌐 En ligne → Shaka normal
+            await sh.load(value);
+            if (typeof CacheManager !== 'undefined' && CacheManager.isEnabled()) {
+              CacheManager.cacheAfterPlay(value, _filename);
+            }
+          }
+        } catch (err) {
+          // Absorbe toutes les erreurs — ne jamais rejeter vers playback.js
+          if (err && err.code !== 7000) {
+            console.warn('[Arya Shaka] Erreur chargement :', err.code || err);
+            if (!navigator.onLine) {
+              toast('📶 Piste non disponible hors ligne', true);
+            }
+          }
+        } finally {
           _shakaPendingLoad = null;
-        });
+        }
+      })();
+
       return true;
     }
 
@@ -155,7 +182,7 @@ const audio = new Proxy({}, {
 
 
 /* ═══════════════════════════════════════════════════════════
-   SWAP (changement de piste instantané)
+   SWAP
 ═══════════════════════════════════════════════════════════ */
 
 function swapAudioBridge() {
@@ -170,15 +197,14 @@ function swapAudioBridge() {
    CROSSFADE / GAPLESS ENGINE
 ═══════════════════════════════════════════════════════════ */
 
-const XFADE_TRIGGER  = 10;   // secondes avant la fin pour déclencher le crossfade
-const XFADE_DURATION = 1400; // durée du fondu en ms
+const XFADE_TRIGGER  = 10;
+const XFADE_DURATION = 1400;
 
-let _preloadedIdx         = -1;
-let _swapTriggered        = false;
-let _xfading              = false;
+let _preloadedIdx           = -1;
+let _swapTriggered          = false;
+let _xfading                = false;
 let _preloadAbortController = null;
 
-/** Retourne l'index de la prochaine piste dans la queue (-1 si aucune). */
 function _nextQueueIdx() {
   if (!queue.length) return -1;
   const ni = queueIdx + 1;
@@ -187,7 +213,6 @@ function _nextQueueIdx() {
   return -1;
 }
 
-/** Annule le pré-chargement en cours et remet l'état à zéro. */
 async function _cancelPreload() {
   if (_preloadAbortController) {
     _preloadAbortController.abort();
@@ -198,17 +223,16 @@ async function _cancelPreload() {
   try {
     inactiveAudio.pause();
     await inactiveShaka.unload();
-  } catch {} // LOAD_INTERRUPTED attendu — silence voulu
+  } catch {}
   _preloadedIdx = -1;
 }
 
-/** Pré-charge la piste suivante sur le lecteur inactif. */
 async function preloadNextTrack() {
   const ni = _nextQueueIdx();
   if (ni < 0) { _preloadedIdx = -1; return; }
   const t = queue[ni];
   if (!t) { _preloadedIdx = -1; return; }
-  if (_preloadedIdx === ni) return; // déjà pré-chargé
+  if (_preloadedIdx === ni) return;
 
   await _cancelPreload();
 
@@ -219,7 +243,38 @@ async function preloadNextTrack() {
 
   try {
     inactiveAudio.volume = 0;
-    await inactiveShaka.load(t.deezerUrl || t.url);
+
+    const _pUrl  = t.deezerUrl || t.url;
+    const _pFile = _pUrl.split('/').pop().split('?')[0];
+
+    const _pBlob = (typeof CacheManager !== 'undefined' && CacheManager.isEnabled())
+      ? await CacheManager.getOrFetch(_pUrl, _pFile)
+      : null;
+
+    if (ctrl.signal.aborted) return;
+
+    if (_pBlob) {
+      // ✅ Cache disponible — bypass Shaka
+      console.log('[Arya Cache] 💾 Pré-chargement hors ligne :', _pFile);
+      inactiveAudio.src = _pBlob;
+      inactiveAudio.load();
+      await _waitCanPlay(inactiveAudio);
+
+    } else if (!navigator.onLine) {
+      // ❌ Hors ligne + pas en cache → abandon silencieux
+      console.warn('[Arya Cache] Pré-chargement annulé (hors ligne) :', _pFile);
+      _preloadedIdx = -1;
+      return;
+
+    } else {
+      // 🌐 En ligne → Shaka normal + prefetch cache
+      await inactiveShaka.load(_pUrl);
+      if (ctrl.signal.aborted) return;
+      if (typeof CacheManager !== 'undefined' && CacheManager.isEnabled()) {
+        CacheManager.prefetch(_pUrl, _pFile);
+      }
+    }
+
     if (ctrl.signal.aborted) return;
 
     _preloadAbortController   = null;
@@ -234,7 +289,6 @@ async function preloadNextTrack() {
   }
 }
 
-/** Déclenche le fondu croisé vers la piste pré-chargée. */
 async function triggerCrossfade() {
   if (_xfading || _preloadedIdx < 0) return;
   const nextTrack = queue[_preloadedIdx];
@@ -251,7 +305,6 @@ async function triggerCrossfade() {
   newAudio.volume      = 0;
   try { await newAudio.play(); } catch (e) { console.warn('[Arya Dual] play:', e); }
 
-  // Fondu croisé en 28 étapes
   const steps  = 28;
   const stepMs = XFADE_DURATION / steps;
   for (let i = 1; i <= steps; i++) {
