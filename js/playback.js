@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   PLAYBACK.JS V5 — Arya
+   PLAYBACK.JS V6 — Arya
    Contrôle de lecture, événements audio, Media Session.
 
    Dépend de : config.js, utils.js, audio-engine.js,
@@ -8,7 +8,6 @@
 ═══════════════════════════════════════════════════════════ */
 
 // Identifiant de la dernière piste comptabilisée dans les stats
-// → évite de compter avant 50% ET évite les doublons crossfade
 let _countedTrackId = null;
 
 
@@ -61,21 +60,54 @@ async function loadAndPlay(t) {
 
   try {
     const currentShaka = activePlayer === 1 ? shaka1 : shaka2;
+    const el           = activePlayer === 1 ? _audio1 : _audio2;
 
     if (_shakaPendingLoad) {
       try { await _shakaPendingLoad; } catch {}
       _shakaPendingLoad = null;
     }
 
-    try {
-      await currentShaka.load(t.deezerUrl || t.url);
-    } catch (fetchErr) {
-      if (fetchErr.code === 7000) throw fetchErr; // LOAD_INTERRUPTED — annulé volontairement
-      if (t.deezerUrl) {
-        console.warn('[Arya Playback] URL Deezer inaccessible, fallback Archive.org :', fetchErr.code || fetchErr);
-        await currentShaka.load(t.url);
-      } else {
-        throw fetchErr;
+    const srcUrl   = t.deezerUrl || t.url;
+    const filename = srcUrl.split('/').pop().split('?')[0];
+
+    // ── 1. Vérifie le cache d'abord ──────────────────────────
+    const blobUrl = (typeof CacheManager !== 'undefined' && CacheManager.isEnabled())
+      ? await CacheManager.getOrFetch(srcUrl, filename)
+      : null;
+
+    if (blobUrl) {
+      // ✅ Lecture depuis le cache — bypass Shaka
+      console.log('[Arya Cache] 💾 loadAndPlay hors ligne :', filename);
+      el.src = blobUrl;
+      el.load();
+      await new Promise(res => {
+        if (el.readyState >= 3) { res(); return; }
+        el.addEventListener('canplay', res, { once: true });
+        el.addEventListener('error',   res, { once: true });
+      });
+
+    } else if (!navigator.onLine) {
+      // ❌ Hors ligne + pas en cache → stop propre, pas d'erreur Shaka
+      toast('📶 Hors ligne — cette piste n\'est pas disponible sans connexion', true);
+      setTimeout(nextTrack, 800);
+      return;
+
+    } else {
+      // 🌐 En ligne → Shaka normal avec fallback deezerUrl → archive.org
+      try {
+        await currentShaka.load(srcUrl);
+      } catch (fetchErr) {
+        if (fetchErr.code === 7000) throw fetchErr; // LOAD_INTERRUPTED — annulé volontairement
+        if (t.deezerUrl) {
+          console.warn('[Arya Playback] URL Deezer inaccessible, fallback Archive.org :', fetchErr.code || fetchErr);
+          await currentShaka.load(t.url);
+        } else {
+          throw fetchErr;
+        }
+      }
+      // Mise en cache après chargement réussi
+      if (typeof CacheManager !== 'undefined' && CacheManager.isEnabled()) {
+        CacheManager.cacheAfterPlay(srcUrl, filename);
       }
     }
 
@@ -83,7 +115,6 @@ async function loadAndPlay(t) {
     updatePlayerUI(t);
     highlightPlaying();
     broadcastTrack(t);
-    // ⚠️ addToHistory & recordPlay déplacés à 50% de lecture dans _onTimeUpdate
 
     fetchAndShowLrc(t); // paroles en arrière-plan
 
@@ -435,7 +466,6 @@ window.updatePlayerUI = function (t) {
 
 /* ═══════════════════════════════════════════════════════════
    FALLBACK POLLING — fin de piste
-   Sécurité en cas d'événement 'ended' manqué.
 ═══════════════════════════════════════════════════════════ */
 
 setInterval(() => {
@@ -449,7 +479,7 @@ setInterval(() => {
 
 
 /* ═══════════════════════════════════════════════════════════
-   VISIBILITYCHANGE — resync état boutons si l'onglet revient
+   VISIBILITYCHANGE
 ═══════════════════════════════════════════════════════════ */
 
 document.addEventListener('visibilitychange', () => {
@@ -460,7 +490,7 @@ document.addEventListener('visibilitychange', () => {
 
   isPlaying = actuallyPlaying;
   const icon = isPlaying ? '⏸' : '▶';
-  document.getElementById('btnPlay')?.setAttribute('textContent', icon); // guard null
+  document.getElementById('btnPlay')?.setAttribute('textContent', icon);
   document.getElementById('btnPlay').textContent   = icon;
   document.getElementById('fsBtnPlay')?.setAttribute('textContent', icon);
   const artEl = document.getElementById('pArt');
