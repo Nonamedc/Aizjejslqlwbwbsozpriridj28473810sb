@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   CACHE.JS V2 — Arya
+   CACHE.JS V3 — Arya
    Cache audio hors ligne via IndexedDB.
    Demande l'autorisation à l'utilisateur au premier lancement.
 
