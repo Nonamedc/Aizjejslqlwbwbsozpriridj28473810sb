@@ -3,6 +3,7 @@
   --bg2: #130e17;
   --card: #1a1220;
   --surface: #221829;
+  --surface2: #2a1f33;
   --border: #352440;
   --accent: #d4a054;
   --accent-rgb: 212,160,84;
@@ -24,22 +25,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 
-.player {
-  background: var(--arya-player-bg) !important;
-  transition: background 0.3s ease;
-}
 
-.p-title, .p-artist, .p-time, .p-btn {
-  color: var(--arya-player-text) !important;
-}
-
-.p-fill {
-  background: var(--arya-player-accent) !important;
-}
-
-.vol-slider::-webkit-slider-thumb {
-  background: var(--arya-player-accent) !important;
-}
 body {
   font-family:'Outfit',sans-serif;
   background:var(--bg);
