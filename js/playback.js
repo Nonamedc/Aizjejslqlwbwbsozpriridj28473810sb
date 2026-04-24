@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   PLAYBACK.JS — Arya V4
+   PLAYBACK.JS V5 — Arya
    Contrôle de lecture, événements audio, Media Session.
 
    Dépend de : config.js, utils.js, audio-engine.js,
