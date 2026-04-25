@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   LIBRARY.JS — Arya V2
+   LIBRARY.JS — Arya
    Favoris, historique et statistiques d'écoute.
 
    Dépend de : config.js, utils.js, covers.js,
@@ -18,6 +18,7 @@ function getFavs() {
 
 function saveFavs(s) {
   localStorage.setItem(FAV_STORE, JSON.stringify([...s]));
+  if (typeof Sync !== 'undefined') Sync.pushFavs();
 }
 
 function isFav(filename) {
@@ -111,6 +112,7 @@ function addToHistory(t) {
   h.unshift({ filename: t.filename, title: t.title, artist: t.artist, album: t.album, id: t.id, ts: Date.now() });
   if (h.length > MAX_HIST) h.splice(MAX_HIST);
   localStorage.setItem(HIST_STORE, JSON.stringify(h));
+  if (typeof Sync !== 'undefined') Sync.pushHistory();
 }
 
 function clearHistory() {
@@ -180,6 +182,7 @@ function recordPlay(t) {
   s[t.filename].title  = t.title;
   s[t.filename].artist = t.artist;
   saveStats(s);
+  if (typeof Sync !== 'undefined') Sync.pushStats();
 }
 
 function flushStatAccum() {
@@ -190,6 +193,7 @@ function flushStatAccum() {
   if (!s[t.filename]) s[t.filename] = { title: t.title, artist: t.artist, plays: 0, seconds: 0 };
   s[t.filename].seconds = (s[t.filename].seconds || 0) + _statAccum;
   saveStats(s);
+  if (typeof Sync !== 'undefined') Sync.pushStats();
   _statAccum = 0;
 }
 
