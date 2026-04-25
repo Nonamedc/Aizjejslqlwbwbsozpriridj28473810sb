@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   RENDER.JS — Arya V2
+   RENDER.JS — Arya
    Rendu des vues : chansons, albums, artistes, détail,
    éditeur de métadonnées, tri et recherche.
 
@@ -300,6 +300,7 @@ function saveEdMeta() {
   edTrack = t;
 
   if (coverVal) refreshCoverForTrack(edTrack.id, coverVal);
+  if (typeof Sync !== 'undefined') Sync.pushMeta();
   filtered = ParentalControl.filterTracks([...tracks]);
   applySort();
   renderAll();
