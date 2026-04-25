@@ -8,6 +8,7 @@ loadPseudo();
 fetchArchive();
 CacheManager.init();
 CacheManager.renderCacheSection();
+Flow.init();
 
 
 /* ═══════════════════════════════════════════════════════════
