@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   PLAYLISTS.JS — Arya V2
+   PLAYLISTS.JS — Arya
    Gestion des playlists, track picker et sheet "ajouter à".
 
    Dépend de : config.js, utils.js, covers.js,
@@ -20,6 +20,7 @@ function getPlaylists() {
 
 function savePlaylists(pls) {
   localStorage.setItem(PLAYLIST_STORE, JSON.stringify(pls));
+  if (typeof Sync !== 'undefined') Sync.pushPlaylists();
 }
 
 function createPlaylist(name) {
