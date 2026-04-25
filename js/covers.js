@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   COVERS.JS — Arya V2
+   COVERS.JS — Arya
    Gestion des pochettes et photos d'artistes.
    Sources : Deezer → iTunes → Wikipedia (fallback)
 
@@ -52,6 +52,7 @@ function setArtistImg(name, url) {
   const store = _getArtistImgStore();
   store[name] = url;
   localStorage.setItem(ARTIST_IMG_STORE, JSON.stringify(store));
+  if (typeof Sync !== 'undefined') Sync.pushArtistImgs();
 }
 
 
