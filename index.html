@@ -114,7 +114,8 @@
   <div class="sidebar-footer">
     <div class="sf-label">Connecté en tant que</div>
     <div class="sf-pseudo" id="sfPseudo">—</div>
-    <div class="sf-change" onclick="changePseudo()">Changer de pseudo</div>
+    <div class="sf-change" onclick="showView('profile')" style="cursor:pointer;">👤 Mon profil</div>
+    <div class="sf-change" onclick="showView('profile')">👤 Mon profil</div>
   </div>
 </nav>
 
@@ -142,6 +143,24 @@
     <div class="party-banner-pulse"></div>
     <span id="partyBannerText">🎉 Mode Fête actif</span>
     <span class="party-banner-leave" onclick="leaveOrStopParty()">Quitter</span>
+  </div>
+
+  <!-- ── PROFIL ── -->
+  <div class="view" id="view-profile">
+    <div class="view-header">
+      <div class="view-title">👤 Profil</div>
+      <div class="view-sub">Vos statistiques et paramètres</div>
+    </div>
+    <div id="profileContent"></div>
+  </div>
+
+  <!-- ── PROFIL ── -->
+  <div class="view" id="view-profile">
+    <div class="view-header">
+      <div class="view-title">👤 Profil</div>
+      <div class="view-sub">Vos stats et paramètres</div>
+    </div>
+    <div id="profileContent"></div>
   </div>
 
   <!-- ── DASHBOARD ── -->
@@ -452,6 +471,13 @@
               <input class="form-input" id="ed-artist" placeholder="Nom de l'artiste">
             </div>
             <div class="form-group">
+              <label class="form-label">
+                Featuring
+                <span style="font-size:10px;color:var(--text3);font-weight:400;">(artiste(s) invité(s), sans "feat.")</span>
+              </label>
+              <input class="form-input" id="ed-feat" placeholder="Artiste invité, laisser vide si aucun">
+            </div>
+            <div class="form-group">
               <label class="form-label">Album</label>
               <input class="form-input" id="ed-album" placeholder="Nom de l'album">
             </div>
@@ -561,6 +587,15 @@
     <div class="playlist-list" id="playlistList"></div>
   </div>
 
+  <!-- ── PROFIL ── -->
+  <div class="view" id="view-profile">
+    <div class="view-header">
+      <div class="view-title">👤 Mon profil</div>
+      <div class="view-sub">Vos stats et paramètres</div>
+    </div>
+    <div id="profileContent"></div>
+  </div>
+
   <!-- ── IMPORT / EXPORT ── -->
   <div class="view" id="view-data">
     <div class="view-header">
@@ -640,9 +675,20 @@
     </div>
   </div>
 
-</main>
+  <!-- ── FLOW ── -->
+  <div class="view" id="view-flow">
+    <div class="view-header">
+      <div class="view-title">🌊 Flow</div>
+      <div class="view-sub">Votre musique, à votre rythme</div>
+    </div>
+    <div id="flowContent"></div>
+  </div>
 
-<!-- ══════════════════════════════════════════════════
+</main>
+    <div id="flowContent"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
      PLAYER (mini barre en bas)
 ═══════════════════════════════════════════════════ -->
 <div class="player">
@@ -751,6 +797,12 @@
     </div>
     <div class="more-item" id="moreRecent"      data-view="recent"      onclick="showViewFromMore('recent');initRecentView()">
       <span class="more-ico">🆕</span>Nouveautés
+    </div>
+    <div class="more-item" id="moreProfile"     data-view="profile"     onclick="showViewFromMore('profile')">
+      <span class="more-ico">👤</span>Profil
+    </div>
+    <div class="more-item" id="moreFlow"        data-view="flow"        onclick="showViewFromMore('flow')">
+      <span class="more-ico">🌊</span>Flow
     </div>
     <div class="more-item" id="moreEq"          data-view="eq"          onclick="showViewFromMore('eq')">
       <span class="more-ico">🎚</span>Égaliseur
@@ -896,6 +948,7 @@
 <script src="js/auth.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/cache.js"></script>
+<script src="js/blocklist.js"></script>
 <script src="js/flow.js"></script>
 <script src="js/init.js"></script>        <!-- EN DERNIER : lance tout -->
 
