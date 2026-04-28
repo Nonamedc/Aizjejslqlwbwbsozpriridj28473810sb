@@ -48,6 +48,9 @@ const STATS_STORE         = 'arya_stats_v1';
 const ARTIST_IMG_STORE    = 'arya_artist_imgs_v1';
 const ARCHIVE_CREDS_STORE = 'arya_archive_creds_v1';
 const LRC_STORE           = 'arya_lrc_v1';
+const PLAYLIST_STORE      = 'arya_playlists_v1';
+const BLOCK_STORE         = 'arya_blocklist_v1';
+const STATS_MONTHLY_STORE = 'arya_stats_monthly';
 
 /** Nombre maximum d'entrées dans l'historique. */
 const MAX_HIST = 150;
