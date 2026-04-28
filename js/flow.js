@@ -74,7 +74,8 @@ const Flow = (() => {
     };
 
     /* ── Score final par piste ── */
-    return ParentalControl.filterTracks(tracks).map(t => {
+    const blocked = typeof BlockList !== 'undefined' ? BlockList.getAll() : new Set();
+    return ParentalControl.filterTracks(tracks).filter(t => !blocked.has(t.filename)).map(t => {
       const s      = stats[t.filename] || { plays: 0 };
       const plays  = s.plays || 0;
 
@@ -176,13 +177,10 @@ const Flow = (() => {
   ═══════════════════════════════════════════════════════════ */
 
   function _injectFlowBtn() {
-    if (document.getElementById('flowBtn')) return;
-
-    /* Styles */
-    if (!document.getElementById('flow-styles')) {
-      const s = document.createElement('style');
-      s.id = 'flow-styles';
-      s.textContent = `
+    if (document.getElementById('flow-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'flow-styles';
+    s.textContent = `
         #flowBtn {
           display: flex;
           align-items: center;
@@ -258,31 +256,8 @@ const Flow = (() => {
           font-weight: 700;
           flex-shrink: 0;
         }
-      `;
-      document.head.appendChild(s);
-    }
-
-    /* Bouton dans la nav sidebar */
-    const navSection = document.querySelector('.sidebar .nav-section');
-    if (navSection) {
-      const item = document.createElement('div');
-      item.className = 'nav-item';
-      item.dataset.view = 'flow';
-      item.innerHTML = '<span class="nav-ico">🌊</span> Flow';
-      item.onclick = () => showView('flow');
-      navSection.appendChild(item);
-    }
-
-    /* Bouton dans more sheet */
-    const moreGrid = document.getElementById('moreGrid') || document.querySelector('.more-grid');
-    if (moreGrid) {
-      const moreItem = document.createElement('div');
-      moreItem.className = 'more-item';
-      moreItem.id        = 'moreFlow';
-      moreItem.innerHTML = '<span class="more-ico">🌊</span>Flow';
-      moreItem.onclick   = () => showViewFromMore('flow');
-      moreGrid.appendChild(moreItem);
-    }
+    `;
+    document.head.appendChild(s);
   }
 
 
@@ -361,20 +336,7 @@ const Flow = (() => {
   ═══════════════════════════════════════════════════════════ */
 
   function _injectFlowView() {
-    if (document.getElementById('view-flow')) return;
-    const main = document.querySelector('main.main');
-    if (!main) return;
-    const div = document.createElement('div');
-    div.className = 'view';
-    div.id        = 'view-flow';
-    div.innerHTML = `
-      <div class="view-header">
-        <div class="view-title">🌊 Flow</div>
-        <div class="view-sub">Votre musique, à votre rythme</div>
-      </div>
-      <div id="flowContent"></div>`;
-    main.appendChild(div);
-
+    // Vue définie statiquement dans index.html — rien à injecter
     // Patch showView pour rendre la vue Flow
     const origShow = window.showView;
     if (origShow && !origShow._flowPatched) {
