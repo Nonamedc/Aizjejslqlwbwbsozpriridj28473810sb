@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   FULLSCREEN.JS — Arya v2
+   FULLSCREEN.JS — Arya
    Wake Lock, lecteur plein écran, swipe, raccourcis clavier,
    bottom sheet "More", Service Worker.
 
@@ -180,7 +180,7 @@ document.addEventListener('keydown', e => {
    MORE BOTTOM SHEET
 ═══════════════════════════════════════════════════════════ */
 
-const MORE_VIEWS = ['stats', 'party', 'history', 'online', 'editor', 'upload', 'playlists', 'data', 'leaderboard', 'eq'];
+const MORE_VIEWS = ['stats', 'party', 'history', 'online', 'editor', 'upload', 'playlists', 'data', 'leaderboard', 'eq', 'flow', 'profile', 'recent'];
 
 function openMoreSheet() {
   document.getElementById('moreBackdrop').classList.add('open');
