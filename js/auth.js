@@ -397,6 +397,23 @@ const Auth = (() => {
    * Appelé depuis init.js à la place de loadPseudo().
    */
   function init() {
+    // ── MODE DEV LOCAL (file:// ou localhost) ──
+    // Bypasse Firebase Auth pour tester sans connexion
+    const isLocal = window.location.protocol === 'file:'
+      || window.location.hostname === 'localhost'
+      || window.location.hostname === '127.0.0.1';
+
+    if (isLocal) {
+      _currentUser = { uid: 'local-dev', email: 'dev@local', displayName: 'Dev', photoURL: null };
+      _uid         = 'local-dev';
+      pseudo       = localStorage.getItem(PSEUDO_STORE) || 'Dev';
+      localStorage.setItem(PSEUDO_STORE, pseudo);
+      _hideAuthScreen();
+      _updateSidebarUser();
+      _onAppReady();
+      return; // pas de Firebase Auth en local
+    }
+
     firebase.auth().onAuthStateChanged(async user => {
       if (user) {
         // ── Connecté ──
@@ -412,9 +429,17 @@ const Auth = (() => {
           console.warn('[Arya Auth] Lecture pseudo:', e);
         }
 
-        if (savedPseudo) {
-          pseudo = savedPseudo;
+        // Priorité : Firebase → localStorage → étape pseudo
+        const localPseudo = localStorage.getItem(PSEUDO_STORE);
+        const finalPseudo = savedPseudo || localPseudo;
+
+        if (finalPseudo) {
+          pseudo = finalPseudo;
           localStorage.setItem(PSEUDO_STORE, pseudo);
+          // Si trouvé en local mais pas Firebase → on le sauvegarde dans Firebase
+          if (!savedPseudo && finalPseudo) {
+            firebase.database().ref(`users/${_uid}/pseudo`).set(pseudo).catch(() => {});
+          }
           _hideAuthScreen();
           _updateSidebarUser();
           _onAppReady();
@@ -429,6 +454,7 @@ const Auth = (() => {
         _currentUser = null;
         _uid         = null;
         pseudo       = '';
+        if (typeof Sync !== 'undefined') Sync.reset();
         _showAuthScreen();
       }
     });
@@ -463,6 +489,10 @@ function _onAppReady() {
   // Flow
   if (typeof Flow !== 'undefined') Flow.init();
 
+  // Notifications Nouveautés temps réel
+  if (typeof initRecentNotifications === 'function') initRecentNotifications();
+
   // Met à jour la sidebar
-  document.getElementById('sfPseudo').textContent = pseudo;
+  const sfP = document.getElementById('sfPseudo');
+  if (sfP) sfP.textContent = pseudo;
 }
