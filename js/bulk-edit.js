@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   BULK-EDIT.JS — Arya v2
+   BULK-EDIT.JS — Arya
    Multi-sélection & édition en masse.
 
    Dépend de : config.js, utils.js, render.js, covers.js
@@ -67,7 +67,7 @@
     /* ── Barre de sélection fixe en bas ── */
     #bulkSelBar {
       position: fixed;
-      bottom: calc(-72px - env(safe-area-inset-bottom, 0px));
+      bottom: calc(-120px - env(safe-area-inset-bottom, 0px));
       left: 0; right: 0;
       background: var(--surface);
       border-top: 1px solid var(--border);
@@ -75,12 +75,19 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      z-index: 210;
+      z-index: 9000; /* au dessus du player ET de la nav mobile */
       transition: bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 -6px 24px rgba(0,0,0,.18);
+      box-shadow: 0 -6px 24px rgba(0,0,0,.55);
       gap: 8px;
+      flex-wrap: wrap;
     }
-    #bulkSelBar.visible { bottom: 0; }
+    #bulkSelBar.visible {
+      /* Se place juste au dessus de la nav mobile */
+      bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+    @media (min-width: 641px) {
+      #bulkSelBar.visible { bottom: 0; }
+    }
     #bulkSelCount {
       font-size: 13px; font-weight: 600;
       color: var(--text); white-space: nowrap; min-width: 80px;
@@ -396,11 +403,33 @@ function _hideSelBar() {
 }
 
 function _updateSelBar() {
-  const n   = _selected.size;
-  const el  = document.getElementById('bulkSelCount');
-  const btn = document.getElementById('bsbEditBtn');
-  if (el)  el.textContent = `${n} sélectionné${n > 1 ? 's' : ''}`;
-  if (btn) btn.disabled   = n === 0;
+  const n = _selected.size;
+  const el = document.getElementById('bulkSelCount');
+  if (el) el.textContent = `${n} sélectionné${n > 1 ? 's' : ''}`;
+
+  // Active/désactive tous les boutons d'action
+  ['bsbPlayBtn','bsbQueueBtn','bsbFavBtn','bsbBlockBtn','bsbPlaylistBtn','bsbEditBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = n === 0;
+  });
+
+  // Met à jour le label favoris selon l'état
+  const favBtn = document.getElementById('bsbFavBtn');
+  if (favBtn && n > 0) {
+    const favs      = getFavs();
+    const selTracks = tracks.filter(t => _selected.has(t.id));
+    const allFaved  = selTracks.every(t => favs.has(t.filename));
+    favBtn.textContent = allFaved ? '♥ Retirer' : '♡ Favoris';
+    favBtn.classList.toggle('accent', allFaved);
+  }
+
+  // Label blocklist
+  const blockBtn = document.getElementById('bsbBlockBtn');
+  if (blockBtn && n > 0 && typeof BlockList !== 'undefined') {
+    const selTracks  = tracks.filter(t => _selected.has(t.id));
+    const allBlocked = selTracks.every(t => BlockList.isBlocked(t.filename));
+    blockBtn.textContent = allBlocked ? '✅ Débloquer' : '🚫 Bloquer';
+  }
 }
 
 
@@ -584,6 +613,130 @@ function saveBulkEdit() {
   if (genreVal) parts.push('genre');
 
   toast(`✅ ${selTracks.length} piste${selTracks.length > 1 ? 's' : ''} modifiée${selTracks.length > 1 ? 's' : ''} — ${parts.join(', ')}`);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   ACTIONS EN MASSE
+═══════════════════════════════════════════════════════════ */
+
+/** Lire toutes les pistes sélectionnées */
+function _bulkPlay() {
+  const sel = tracks.filter(t => _selected.has(t.id));
+  if (!sel.length) return;
+  queue    = [...sel];
+  queueIdx = 0;
+  playFromQueue();
+  _exitSelMode();
+  toast(`▶ ${sel.length} piste${sel.length > 1 ? 's' : ''} en lecture`);
+}
+
+/** Ajouter à la file d'attente */
+function _bulkAddQueue() {
+  const sel = tracks.filter(t => _selected.has(t.id));
+  if (!sel.length) return;
+  sel.forEach(t => queue.push(t));
+  _exitSelMode();
+  toast(`＋ ${sel.length} piste${sel.length > 1 ? 's' : ''} ajoutée${sel.length > 1 ? 's' : ''} à la file`);
+}
+
+/** Toggle favoris sur toutes les pistes sélectionnées */
+function _bulkToggleFav() {
+  const sel    = tracks.filter(t => _selected.has(t.id));
+  if (!sel.length) return;
+  const favs   = getFavs();
+  const allFav = sel.every(t => favs.has(t.filename));
+  sel.forEach(t => {
+    if (allFav) favs.delete(t.filename);
+    else        favs.add(t.filename);
+  });
+  saveFavs(favs);
+  updateFavBadge();
+  renderFavorites();
+  _exitSelMode();
+  toast(allFav ? `💔 ${sel.length} piste${sel.length > 1 ? 's' : ''} retirée${sel.length > 1 ? 's' : ''} des favoris` : `❤️ ${sel.length} piste${sel.length > 1 ? 's' : ''} ajoutée${sel.length > 1 ? 's' : ''} aux favoris`);
+}
+
+/** Bloquer / débloquer toutes les pistes sélectionnées */
+function _bulkBlock() {
+  if (typeof BlockList === 'undefined') return;
+  const sel      = tracks.filter(t => _selected.has(t.id));
+  if (!sel.length) return;
+  const allBlocked = sel.every(t => BlockList.isBlocked(t.filename));
+  sel.forEach(t => allBlocked ? BlockList.unblock(t.filename) : BlockList.block(t.filename));
+  _exitSelMode();
+  toast(allBlocked
+    ? `✅ ${sel.length} piste${sel.length > 1 ? 's' : ''} débloquée${sel.length > 1 ? 's' : ''}`
+    : `🚫 ${sel.length} piste${sel.length > 1 ? 's' : ''} bloquée${sel.length > 1 ? 's' : ''}`);
+}
+
+/** Ajouter à une playlist — ouvre le sheet de sélection */
+function _bulkAddPlaylist() {
+  const sel = tracks.filter(t => _selected.has(t.id));
+  if (!sel.length) return;
+
+  // Crée un sheet de sélection de playlist
+  let sheet = document.getElementById('bulkPlSheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'bulkPlSheet';
+    sheet.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);';
+    document.body.appendChild(sheet);
+  }
+
+  const pls     = typeof getPlaylists === 'function' ? getPlaylists() : {};
+  const entries = Object.values(pls).sort((a, b) => b.created - a.created);
+
+  sheet.innerHTML = `
+    <div style="background:var(--surface);border-radius:22px 22px 0 0;width:100%;
+                max-height:70vh;overflow-y:auto;padding:16px 0 32px;">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 16px;"></div>
+      <div style="font-size:15px;font-weight:700;padding:0 20px 14px;border-bottom:1px solid var(--border);">
+        📋 Ajouter ${sel.length} piste${sel.length > 1 ? 's' : ''} à…
+      </div>
+      <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+        ${entries.length ? entries.map(pl => `
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;
+                      border-radius:12px;background:var(--card);border:1px solid var(--border);
+                      cursor:pointer;"
+               onclick="_bulkAddToPlaylist('${pl.id}')">
+            <span style="font-size:20px;">🎵</span>
+            <div>
+              <div style="font-size:14px;font-weight:600;">${esc(pl.name)}</div>
+              <div style="font-size:11.5px;color:var(--text2);">${pl.tracks.length} titre${pl.tracks.length > 1 ? 's' : ''}</div>
+            </div>
+          </div>`).join('') : `<div style="color:var(--text3);text-align:center;padding:20px;">Aucune playlist</div>`}
+        <div style="padding:8px 4px;">
+          <input id="bulkPlNewName" class="form-input" placeholder="＋ Nouvelle playlist…"
+                 style="width:100%;box-sizing:border-box;"
+                 onkeydown="if(event.key==='Enter')_bulkCreateAndAdd()">
+          <button class="btn btn-acc" style="width:100%;margin-top:8px;font-size:13px;padding:10px;"
+                  onclick="_bulkCreateAndAdd()">Créer et ajouter</button>
+        </div>
+      </div>
+      <button onclick="document.getElementById('bulkPlSheet').remove()"
+              style="position:absolute;top:14px;right:16px;background:none;border:none;
+                     font-size:20px;cursor:pointer;color:var(--text2);">✕</button>
+    </div>`;
+
+  sheet.onclick = e => { if (e.target === sheet) sheet.remove(); };
+}
+
+function _bulkAddToPlaylist(plId) {
+  const sel = tracks.filter(t => _selected.has(t.id));
+  sel.forEach(t => { if (typeof addToPlaylist === 'function') addToPlaylist(plId, t.filename); });
+  document.getElementById('bulkPlSheet')?.remove();
+  _exitSelMode();
+  const pl = typeof getPlaylists === 'function' ? getPlaylists()[plId] : null;
+  toast(`✅ ${sel.length} piste${sel.length > 1 ? 's' : ''} ajoutée${sel.length > 1 ? 's' : ''} à "${pl?.name || 'playlist'}"`);
+}
+
+function _bulkCreateAndAdd() {
+  const name = (document.getElementById('bulkPlNewName')?.value || '').trim();
+  if (!name) { toast('Donne un nom à la playlist', true); return; }
+  const id = typeof createPlaylist === 'function' ? createPlaylist(name) : null;
+  if (id) _bulkAddToPlaylist(id);
+  else { document.getElementById('bulkPlSheet')?.remove(); _exitSelMode(); }
 }
 
 
