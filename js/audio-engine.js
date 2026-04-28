@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   AUDIO-ENGINE.JS V8 — Arya
+   AUDIO-ENGINE.JS — Arya V6
    Double buffering Shaka Player + crossfade gapless.
 ═══════════════════════════════════════════════════════════ */
 
