@@ -60,9 +60,13 @@ function parseFilename(fn) {
     title = parts[0];
   }
 
+  const featMatch = title.match(FEAT_RX);
+  const feat = featMatch
+    ? featMatch[0].replace(/^\s*[\(\[](feat|ft|with|avec)\.?\s*/i, '').replace(/[\)\]]\s*$/, '').trim()
+    : '';
   title = title.replace(FEAT_RX, '').trim();
 
-  return { title, artist, album, year, genre };
+  return { title, artist, album, year, genre, feat };
 }
 
 
@@ -124,6 +128,7 @@ async function fetchArchive() {
         album:    saved.album  || parsed.album,
         year:     saved.year   || parsed.year,
         genre:    saved.genre  || parsed.genre,
+        feat:     saved.feat   !== undefined ? saved.feat : (parsed.feat || ''),
         length:   f.length || 0,
         size:     f.size   || 0,
         ...(saved.deezerUrl && { deezerUrl: saved.deezerUrl })
@@ -194,4 +199,28 @@ function updateCounts() {
   set('artistCount', r, 'artiste');
 
   updateFavBadge();
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   APPLY META
+   Applique les métadonnées sauvegardées sur les pistes
+   en mémoire. Appelé après fetchArchive() et import.
+═══════════════════════════════════════════════════════════ */
+
+function applyMeta() {
+  const meta = getMeta();
+  tracks.forEach(t => {
+    const s = meta[t.filename];
+    if (!s) return;
+    if (s.title)            t.title     = s.title;
+    if (s.artist)           t.artist    = s.artist;
+    if (s.album)            t.album     = s.album;
+    if (s.year)             t.year      = s.year;
+    if (s.genre)            t.genre     = s.genre;
+    if (s.feat  !== undefined) t.feat   = s.feat;
+    if (s.deezerUrl) t.deezerUrl = s.deezerUrl;
+    else             delete t.deezerUrl;
+  });
+  filtered = [...tracks];
 }
