@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   DATA.JS — Arya v2
+   DATA.JS — Arya
    Export / import de données, enrichissement manuel
    et application des métadonnées sauvegardées.
 
@@ -71,28 +71,6 @@ function _updateEnrichDataUI(state) {
 }
 
 
-/* ═══════════════════════════════════════════════════════════
-   APPLY META
-   Applique les métadonnées sauvegardées sur les pistes
-   en mémoire (appelé après fetchArchive et import).
-═══════════════════════════════════════════════════════════ */
-
-function applyMeta() {
-  const meta = getMeta();
-  tracks.forEach(t => {
-    const s = meta[t.filename];
-    if (!s) return;
-    if (s.title)     t.title     = s.title;
-    if (s.artist)    t.artist    = s.artist;
-    if (s.album)     t.album     = s.album;
-    if (s.year)      t.year      = s.year;
-    if (s.genre)     t.genre     = s.genre;
-    if (s.deezerUrl) t.deezerUrl = s.deezerUrl;
-    else             delete t.deezerUrl;
-  });
-  filtered = [...tracks];
-}
-
 
 /* ═══════════════════════════════════════════════════════════
    EXPORT
@@ -115,6 +93,7 @@ function exportData() {
     playlists:  _get(PLAYLIST_STORE,   '{}'),
     artistImgs: _get(ARTIST_IMG_STORE, '{}'),
     lrcCache:   _get(LRC_STORE,        '{}'),
+    blocklist:  _get(BLOCK_STORE,      '[]'),
   };
 
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -155,6 +134,7 @@ function importData(mode) {
         if (data.artistImgs) localStorage.setItem(ARTIST_IMG_STORE, JSON.stringify(data.artistImgs));
         // ✅ lrcCache importé en mode replace
         if (data.lrcCache)   localStorage.setItem(LRC_STORE,        JSON.stringify(data.lrcCache));
+        if (data.blocklist) localStorage.setItem(BLOCK_STORE,      JSON.stringify(data.blocklist));
 
       } else {
         // ── MODE FUSION ──
@@ -200,6 +180,12 @@ function importData(mode) {
           const cur = JSON.parse(localStorage.getItem(LRC_STORE) || '{}');
           localStorage.setItem(LRC_STORE, JSON.stringify({ ...data.lrcCache, ...cur }));
         }
+        // Blocklist fusionnée
+        if (data.blocklist) {
+          const cur = new Set(JSON.parse(localStorage.getItem(BLOCK_STORE) || '[]'));
+          (data.blocklist).forEach(f => cur.add(f));
+          localStorage.setItem(BLOCK_STORE, JSON.stringify([...cur]));
+        }
       }
 
       _afterImport();
@@ -221,8 +207,16 @@ function importData(mode) {
 
 function clearAllData() {
   if (!confirm('⚠️ Effacer TOUTES les données locales (méta, favoris, historique, stats, playlists) ?\n\nAction irréversible.')) return;
-  [META_STORE, FAV_STORE, HIST_STORE, STATS_STORE, PLAYLIST_STORE, ARTIST_IMG_STORE, LRC_STORE]
+  [META_STORE, FAV_STORE, HIST_STORE, STATS_STORE, PLAYLIST_STORE, ARTIST_IMG_STORE, LRC_STORE, BLOCK_STORE, STATS_MONTHLY_STORE]
     .forEach(k => localStorage.removeItem(k));
+  // Efface aussi dans Firebase
+  if (typeof _uid !== 'undefined' && _uid) {
+    firebase.database().ref(`users/${_uid}`).set({
+      pseudo,
+      favs: [], history: [], stats: {}, playlists: {},
+      meta: {}, artistImgs: {}, lrcCache: {}, blocklist: [],
+    }).catch(() => {});
+  }
   _afterImport();
   toast('🗑 Données effacées');
 }
@@ -243,5 +237,8 @@ function _afterImport() {
   renderFavorites();
   renderHistory();
   if (typeof renderPlaylists === 'function') renderPlaylists();
+  if (typeof BlockList       !== 'undefined') BlockList.refreshUI();
   updateFavBadge();
+  // Pousse toutes les données importées vers Firebase
+  if (typeof Sync !== 'undefined') Sync.pushAll();
 }
