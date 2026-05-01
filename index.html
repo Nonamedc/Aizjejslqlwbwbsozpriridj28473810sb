@@ -71,6 +71,11 @@
       <span class="nav-icon">❤️</span> Favoris
       <span class="nav-badge" id="favBadge" style="display:none;">0</span>
     </div>
+    <div class="nav-item" data-view="offline" onclick="showView('offline');renderOffline()">
+      <span class="nav-icon">📥</span> Hors ligne
+      <span class="nav-badge" id="offlineBadge" style="display:none;">0</span>
+    </div>
+
     <div class="nav-item" data-view="history" onclick="showView('history')">
       <span class="nav-icon">🕐</span> Historique
     </div>
@@ -192,7 +197,7 @@
     </div>
     <div class="col-heads">
       <div>#</div><div></div>
-      <div>Titre</div><div>Artiste</div><div>Album</div><div style="text-align:right">Durée</div>
+      <div>Titre</div><div>Album</div><div style="text-align:right">Durée</div>
     </div>
     <div class="track-list" id="trackList">
       <div class="loading">
@@ -256,9 +261,33 @@
     </div>
     <div class="col-heads">
       <div>#</div><div></div>
-      <div>Titre</div><div>Artiste</div><div>Album</div><div style="text-align:right">Durée</div>
+      <div>Titre</div><div>Album</div><div style="text-align:right">Durée</div>
     </div>
     <div class="track-list" id="favList"></div>
+  </div>
+
+  <!-- ── HORS LIGNE ── -->
+  <div class="view" id="view-offline">
+    <div class="view-header">
+      <div class="view-title">📥 Hors ligne</div>
+      <div class="view-sub" id="offlineCount">Calcul en cours…</div>
+      <div class="detail-acts" style="margin-top:14px;">
+        <button class="btn btn-acc" onclick="playAllOffline()">▶ Tout lire</button>
+        <button class="btn btn-ghost" onclick="renderOffline()">↻ Actualiser</button>
+      </div>
+    </div>
+    <div id="offlineEmpty" style="display:none;padding:48px 0;text-align:center;">
+      <div style="font-size:44px;margin-bottom:14px;">📶</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Aucune musique en cache</div>
+      <div style="font-size:12.5px;color:var(--text2);line-height:1.7;">Les pistes sont mises en cache automatiquement après lecture.</div>
+    </div>
+    <div id="offlineLoading" style="padding:48px 0;text-align:center;color:var(--text3);font-size:13px;">
+      <div class="spinner" style="margin:0 auto 14px;"></div>Vérification du cache…
+    </div>
+    <div class="col-heads" id="offlineColHeads" style="display:none;">
+      <div>#</div><div></div><div>Titre</div><div>Album</div><div style="text-align:right">Durée</div>
+    </div>
+    <div class="track-list" id="offlineList"></div>
   </div>
 
   <!-- ── HISTORIQUE ── -->
@@ -272,7 +301,7 @@
     </div>
     <div class="col-heads hist-col-heads">
       <div>#</div><div></div>
-      <div>Titre</div><div>Artiste</div><div>Quand</div><div style="text-align:right">Heure</div>
+      <div>Titre</div><div>Quand</div><div style="text-align:right">Heure</div>
     </div>
     <div class="track-list" id="histList"></div>
   </div>
@@ -752,6 +781,10 @@
   <button class="mn-btn" data-view="artists" onclick="showView('artists')">
     <span class="mn-ico">🎤</span>Artistes
   </button>
+  <button class="mn-btn" data-view="offline" onclick="showView('offline');renderOffline()">
+    <span class="mn-ico">📥</span>Hors ligne
+  </button>
+
   <button class="mn-btn" id="mnMoreBtn" onclick="openMoreSheet()">
     <span class="mn-ico">⋯</span>Plus
   </button>
@@ -950,6 +983,7 @@
 <script src="js/cache.js"></script>
 <script src="js/blocklist.js"></script>
 <script src="js/flow.js"></script>
+<script src="js/offline.js"></script>
 <script src="js/init.js"></script>        <!-- EN DERNIER : lance tout -->
 
 </body>
